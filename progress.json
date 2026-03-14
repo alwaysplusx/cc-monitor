@@ -1,5 +1,5 @@
 {
-  "lastCompleted": "T1-8",
+  "lastCompleted": "T2-7",
   "completedTasks": [
     { "id": "T1-1", "status": "completed", "name": "创建 electron-vite 项目" },
     { "id": "T1-2", "status": "completed", "name": "安装核心依赖" },
@@ -8,8 +8,15 @@
     { "id": "T1-5", "status": "completed", "name": "配置 ESLint + Prettier" },
     { "id": "T1-6", "status": "completed", "name": "创建目录结构和空文件" },
     { "id": "T1-7", "status": "completed", "name": "配置 electron-builder" },
-    { "id": "T1-8", "status": "completed", "name": "最终验证" }
+    { "id": "T1-8", "status": "completed", "name": "最终验证" },
+    { "id": "T2-1", "status": "completed", "name": "定义 TypeScript 类型" },
+    { "id": "T2-2", "status": "completed", "name": "实现 JSONL 解析器" },
+    { "id": "T2-3", "status": "completed", "name": "实现数据缓存" },
+    { "id": "T2-4", "status": "completed", "name": "实现数据聚合器" },
+    { "id": "T2-5", "status": "completed", "name": "实现项目扫描器" },
+    { "id": "T2-6", "status": "completed", "name": "实现 IPC 通信层" },
+    { "id": "T2-7", "status": "completed", "name": "实现设置持久化" }
   ],
-  "nextTask": "T2-1",
-  "phaseCompleted": "Phase 1"
+  "nextTask": "T3-1",
+  "phaseCompleted": "Phase 2"
 }
