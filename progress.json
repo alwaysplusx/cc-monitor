@@ -1,0 +1,41 @@
+{
+  "lastCompleted": "T1-4",
+  "completedTasks": [
+    {
+      "id": "T1-1",
+      "name": "创建 electron-vite 项目",
+      "status": "completed",
+      "completedAt": "2026-03-14T19:27:00",
+      "notes": "手动搭建 electron-vite + React + TypeScript 项目骨架"
+    },
+    {
+      "id": "T1-2",
+      "name": "安装核心依赖",
+      "status": "completed",
+      "completedAt": "2026-03-14T19:32:00",
+      "notes": "安装所有核心依赖和 shadcn/ui 工具链"
+    },
+    {
+      "id": "T1-3",
+      "name": "配置 TypeScript",
+      "status": "completed",
+      "completedAt": "2026-03-14T19:35:00",
+      "notes": "tsconfig.json + tsconfig.node.json + tsconfig.web.json，tsc --noEmit 通过"
+    },
+    {
+      "id": "T1-4",
+      "name": "配置 Tailwind CSS",
+      "status": "completed",
+      "completedAt": "2026-03-14T19:34:00",
+      "notes": "Tailwind CSS v4 + @tailwindcss/vite，CSS 变量 dark/light 双套配色"
+    },
+    {
+      "id": "T1-5",
+      "name": "配置 ESLint + Prettier",
+      "status": "completed",
+      "completedAt": "2026-03-14T19:38:00",
+      "notes": "ESLint 8 + Prettier 配置完成，lint 和 format 均通过"
+    }
+  ],
+  "nextTask": "T1-6"
+}

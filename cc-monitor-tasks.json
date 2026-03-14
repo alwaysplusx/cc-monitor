@@ -1,0 +1,536 @@
+{
+  "project": "cc-monitor",
+  "version": "0.1.0",
+  "description": "Claude Code Token 消耗监控 Electron 桌面应用",
+  "phases": [
+    {
+      "id": "phase-1",
+      "name": "项目初始化",
+      "description": "搭建项目骨架，确保 pnpm dev 可以启动空窗口",
+      "tasks": [
+        {
+          "id": "T1-1",
+          "name": "创建 electron-vite 项目",
+          "description": "使用 electron-vite 创建 React + TypeScript 项目脚手架",
+          "steps": [
+            "运行 pnpm create @quick-start/electron cc-monitor --template react-ts",
+            "进入项目目录，验证初始结构",
+            "运行 pnpm dev 确认空窗口可以启动"
+          ],
+          "acceptance": "pnpm dev 启动后弹出 Electron 窗口，显示默认 React 页面",
+          "depends_on": []
+        },
+        {
+          "id": "T1-2",
+          "name": "安装核心依赖",
+          "description": "安装所有业务需要的 npm 包",
+          "steps": [
+            "pnpm add echarts echarts-for-react zustand chokidar",
+            "pnpm add -D tailwindcss @tailwindcss/vite postcss autoprefixer",
+            "pnpm add -D electron-builder",
+            "pnpm add lucide-react class-variance-authority clsx tailwind-merge",
+            "初始化 shadcn/ui: pnpm dlx shadcn@latest init，选择 New York style、zinc 色板、CSS variables 启用",
+            "验证 package.json 中所有依赖已正确添加"
+          ],
+          "acceptance": "pnpm install 无报错，package.json 包含所有依赖",
+          "depends_on": ["T1-1"]
+        },
+        {
+          "id": "T1-3",
+          "name": "配置 TypeScript",
+          "description": "设置三套 tsconfig 分别用于主进程、渲染进程和根配置",
+          "steps": [
+            "tsconfig.json: 根配置，references 指向 node 和 web",
+            "tsconfig.node.json: 主进程配置，target ES2022，module ESNext，include electron/**",
+            "tsconfig.web.json: 渲染进程配置，target ESNext，jsx react-jsx，include src/**",
+            "确保路径别名 @ 指向 src/，electron-vite 自带的配置按需调整"
+          ],
+          "acceptance": "tsc --noEmit 无类型错误",
+          "depends_on": ["T1-1"]
+        },
+        {
+          "id": "T1-4",
+          "name": "配置 Tailwind CSS",
+          "description": "设置 Tailwind CSS v4 + shadcn/ui 主题",
+          "steps": [
+            "创建 src/styles/globals.css，引入 @tailwind base/components/utilities",
+            "配置 tailwind.config.ts，content 路径包含 src/**/*.{ts,tsx}",
+            "配置 dark mode 为 class 策略（支持手动切换）",
+            "定义 CSS 变量：dark 和 light 两套配色（参见设计文档 7.3 节）",
+            "在 src/main.tsx 中引入 globals.css",
+            "验证：在 App.tsx 中添加一个带 Tailwind class 的元素，确认样式生效"
+          ],
+          "acceptance": "Tailwind 样式在渲染窗口中正确显示，dark/light class 切换有效",
+          "depends_on": ["T1-2"]
+        },
+        {
+          "id": "T1-5",
+          "name": "配置 ESLint + Prettier",
+          "description": "统一代码风格",
+          "steps": [
+            "创建 .eslintrc.cjs，使用 @electron-toolkit/eslint-config-ts + react 推荐配置",
+            "创建 .prettierrc：semi: false, singleQuote: true, tabWidth: 2, printWidth: 100",
+            "在 package.json 中添加 lint 和 format 脚本",
+            "添加 .editorconfig"
+          ],
+          "acceptance": "pnpm lint 无报错，pnpm format 可执行",
+          "depends_on": ["T1-1"]
+        },
+        {
+          "id": "T1-6",
+          "name": "创建目录结构和空文件",
+          "description": "按设计文档第 4 节创建完整目录结构，每个文件添加注释说明职责",
+          "steps": [
+            "创建 electron/ 目录结构：main.ts, preload.ts, services/(watcher.ts, parser.ts, cache.ts, aggregator.ts, project-scanner.ts, tray.ts), ipc/(channels.ts, handlers.ts)",
+            "创建 src/ 目录结构：components/(layout/, charts/, tables/, common/), hooks/, stores/, lib/, types/, styles/",
+            "每个文件写入 TODO 注释和基本的 export 占位，确保 TypeScript 编译不报错",
+            "创建 resources/ 目录，放一个占位图标文件"
+          ],
+          "acceptance": "目录结构与设计文档第 4 节一致，所有文件存在且 TypeScript 编译通过",
+          "depends_on": ["T1-3"]
+        },
+        {
+          "id": "T1-7",
+          "name": "配置 electron-builder",
+          "description": "创建打包配置文件",
+          "steps": [
+            "创建 electron-builder.yml，内容参照设计文档第 8.1 节",
+            "配置 appId: com.ccmonitor.app，productName: CC Monitor",
+            "配置 win (nsis, x64+arm64), mac (dmg), linux (AppImage)",
+            "在 package.json 中添加 build 脚本: electron-vite build && electron-builder"
+          ],
+          "acceptance": "配置文件语法正确，pnpm build 至少能走到 electron-builder 阶段（不要求打包成功）",
+          "depends_on": ["T1-6"]
+        },
+        {
+          "id": "T1-8",
+          "name": "最终验证",
+          "description": "确保骨架项目可以正常运行",
+          "steps": [
+            "pnpm dev 启动，Electron 窗口弹出，显示空白 React 页面",
+            "窗口标题为 CC Monitor",
+            "控制台无报错",
+            "TypeScript 编译无错误",
+            "ESLint 无错误"
+          ],
+          "acceptance": "以上所有检查通过",
+          "depends_on": ["T1-4", "T1-5", "T1-7"]
+        }
+      ]
+    },
+    {
+      "id": "phase-2",
+      "name": "数据层",
+      "description": "实现 JSONL 解析、数据缓存、聚合逻辑和 IPC 通信",
+      "tasks": [
+        {
+          "id": "T2-1",
+          "name": "定义 TypeScript 类型",
+          "description": "创建所有数据模型的类型定义",
+          "steps": [
+            "在 src/types/data.ts 中定义：RawRecord, UsageData, ContentBlock, TokenRecord, MinuteBucket, HourBucket, DayBucket, SessionSummary, ModelSummary, ProjectInfo",
+            "在 src/types/ipc.ts 中定义：IPC 通信的请求和响应类型",
+            "在 src/types/electron.d.ts 中定义：ElectronAPI 接口（preload 暴露的 API）",
+            "所有类型严格按设计文档第 3 节的数据模型定义"
+          ],
+          "acceptance": "类型文件编译通过，覆盖所有数据模型",
+          "depends_on": ["T1-8"]
+        },
+        {
+          "id": "T2-2",
+          "name": "实现 JSONL 解析器",
+          "description": "主进程侧的 JSONL 文件解析",
+          "steps": [
+            "在 electron/services/parser.ts 中实现 parseJsonlFile(filePath: string, startLine?: number): TokenRecord[]",
+            "按行读取 JSONL 文件，JSON.parse 每行",
+            "仅提取 type='assistant' 且 usage 中有 token>0 的记录，转为 TokenRecord",
+            "同时提取 type='user' 的纯文本消息（用于 session 标题）",
+            "同时提取 type='system' subtype='turn_duration' 的记录",
+            "支持增量解析：传入 startLine 时跳过前 N 行",
+            "错误处理：单行解析失败跳过继续，不抛异常",
+            "用上传的样本 JSONL 文件编写单元测试验证"
+          ],
+          "acceptance": "能正确解析样本 JSONL，提取出 174 条 TokenRecord，时间戳和 token 数值正确",
+          "depends_on": ["T2-1"],
+          "test_data": "将用户上传的两个 JSONL 样本文件放到 test/fixtures/ 目录"
+        },
+        {
+          "id": "T2-3",
+          "name": "实现数据缓存",
+          "description": "文件级缓存，避免重复解析",
+          "steps": [
+            "在 electron/services/cache.ts 中实现 FileCache 类",
+            "数据结构：Map<filePath, { lastSize, lastModified, records, lineCount }>",
+            "方法：getOrParse(filePath) — 如果文件未变化返回缓存，否则增量解析新行并更新缓存",
+            "方法：invalidate(filePath) — 删除指定文件的缓存",
+            "方法：getAllRecords() — 返回所有缓存的 TokenRecord 合并数组",
+            "方法：getRecordsByProject(projectPath) — 按项目路径筛选"
+          ],
+          "acceptance": "缓存命中时不重新读取文件，文件变化时仅解析新增行",
+          "depends_on": ["T2-2"]
+        },
+        {
+          "id": "T2-4",
+          "name": "实现数据聚合器",
+          "description": "实现分钟/小时/天/模型/session 多维度聚合",
+          "steps": [
+            "在 electron/services/aggregator.ts 中实现以下函数：",
+            "aggregateByMinute(records, timeRange?) → MinuteBucket[] — 按分钟聚合，填充时间间隙",
+            "aggregateByHour(records, timeRange?) → HourBucket[] — 按小时聚合",
+            "aggregateByDay(records, timeRange?) → DayBucket[] — 按天聚合",
+            "aggregateByModel(records) → ModelSummary[] — 按模型聚合，计算占比",
+            "aggregateBySession(records, allRawRecords) → SessionSummary[] — 按 session+subagent 聚合",
+            "detectModelSwitches(records) → { timestamp, fromModel, toModel }[] — 检测模型切换时间点",
+            "calculateWindowUsage(records, windowStart, windowDurationMs, planLimit) → { used, limit, percentage, isExpired }"
+          ],
+          "acceptance": "用样本数据测试，aggregateByMinute 输出 47 个活跃分钟桶，aggregateByModel 输出 1 个模型（glm-4.7）",
+          "depends_on": ["T2-1"]
+        },
+        {
+          "id": "T2-5",
+          "name": "实现项目扫描器",
+          "description": "扫描 ~/.claude/projects/ 发现所有项目和 JSONL 文件",
+          "steps": [
+            "在 electron/services/project-scanner.ts 中实现 scanProjects(baseDir): ProjectInfo[]",
+            "递归扫描 baseDir 下的所有子目录",
+            "每个包含 .jsonl 文件的目录视为一个 project",
+            "从 JSONL 记录中的 cwd 字段推断实际项目工作目录",
+            "返回项目列表，包含路径、session 数、总 token、最后活跃时间",
+            "自动检测操作系统，适配 Windows/macOS/Linux 的 ~/.claude 路径"
+          ],
+          "acceptance": "能在 Windows 上正确扫描 %USERPROFILE%\\.claude\\projects\\ 目录",
+          "depends_on": ["T2-2"]
+        },
+        {
+          "id": "T2-6",
+          "name": "实现 IPC 通信层",
+          "description": "主进程和渲染进程之间的通信桥梁",
+          "steps": [
+            "在 electron/ipc/channels.ts 中定义所有 IPC 频道常量（参照设计文档第 5.1 节）",
+            "在 electron/ipc/handlers.ts 中注册所有 ipcMain.handle 处理器：GET_PROJECTS, GET_TOKEN_DATA, SELECT_DIRECTORY, GET_SETTINGS, SAVE_SETTINGS, REFRESH",
+            "在 electron/preload.ts 中通过 contextBridge.exposeInMainWorld 暴露 ElectronAPI",
+            "在 src/lib/ipc.ts 中封装渲染进程调用 preload API 的工具函数",
+            "实现双向通信：主进程通过 webContents.send 推送 DATA_UPDATED 事件到渲染进程"
+          ],
+          "acceptance": "渲染进程可以调用 window.api.getProjects() 并收到主进程返回的数据",
+          "depends_on": ["T2-3", "T2-4", "T2-5"]
+        },
+        {
+          "id": "T2-7",
+          "name": "实现设置持久化",
+          "description": "应用设置的读写",
+          "steps": [
+            "在主进程中使用 electron-store 或直接读写 JSON 文件（app.getPath('userData')/settings.json）",
+            "设置数据结构参照设计文档第 5.3 节 AppSettings",
+            "默认值：claudeDataDir 自动检测, theme 为 system, planType 为 max20, watchEnabled 为 true",
+            "通过 IPC GET_SETTINGS / SAVE_SETTINGS 暴露给渲染进程"
+          ],
+          "acceptance": "设置能持久化到磁盘，重启应用后恢复",
+          "depends_on": ["T2-6"]
+        }
+      ]
+    },
+    {
+      "id": "phase-3",
+      "name": "UI 骨架",
+      "description": "搭建页面布局和基础组件，用 mock 数据展示",
+      "tasks": [
+        {
+          "id": "T3-1",
+          "name": "实现 zustand stores",
+          "description": "创建数据和设置的全局状态",
+          "steps": [
+            "在 src/stores/dataStore.ts 中创建 useDataStore：存储 projects, currentProject, tokenRecords, minuteBuckets, modelSummaries, sessionSummaries, windowUsage",
+            "action: setProject(path) — 切换当前项目并重新聚合",
+            "action: updateData(records) — 接收新数据并更新所有聚合",
+            "action: setTimeView(level) — 切换小时/天/月视图并重新聚合",
+            "在 src/stores/settingsStore.ts 中创建 useSettingsStore：存储 theme, planType, customTokenLimit, claudeDataDir, windowStartTime"
+          ],
+          "acceptance": "store 定义完整，action 类型正确",
+          "depends_on": ["T2-7"]
+        },
+        {
+          "id": "T3-2",
+          "name": "实现 useTokenData hook",
+          "description": "订阅主进程数据更新，驱动 store 刷新",
+          "steps": [
+            "在 src/hooks/useTokenData.ts 中实现",
+            "组件挂载时调用 window.api.getProjects() 获取项目列表",
+            "调用 window.api.getTokenData(projectPath) 获取 token 数据",
+            "监听 window.api.onDataUpdated 事件，收到更新后刷新数据",
+            "将数据写入 dataStore"
+          ],
+          "acceptance": "数据能从主进程流入 store",
+          "depends_on": ["T3-1"]
+        },
+        {
+          "id": "T3-3",
+          "name": "实现主题系统",
+          "description": "Light / Dark / System 主题切换",
+          "steps": [
+            "在 src/hooks/useTheme.ts 中实现主题管理",
+            "监听系统 prefers-color-scheme 变化（System 模式时跟随）",
+            "在 html 根元素设置 data-theme 属性和 dark class",
+            "在 src/lib/theme.ts 中定义 ECharts 的 dark 和 light 主题对象",
+            "主题切换时通知所有 ECharts 实例重绘",
+            "持久化到 settingsStore → 通过 IPC 保存"
+          ],
+          "acceptance": "三种主题模式均可正常切换，ECharts 图表跟随变色",
+          "depends_on": ["T3-1"]
+        },
+        {
+          "id": "T3-4",
+          "name": "实现 Header 组件",
+          "description": "顶部导航栏",
+          "steps": [
+            "在 src/components/layout/Header.tsx 中实现",
+            "左侧：Logo（CC 字样 + 渐变背景）+ 标题 'CC Monitor'",
+            "中间：项目选择器下拉框（从 dataStore.projects 获取列表）",
+            "右侧：文件监控状态指示灯（绿点 + 时间文字）、主题切换按钮（🖥️/☀️/🌙）、设置按钮（齿轮图标）",
+            "使用 shadcn/ui 的 DropdownMenu、Button 等组件"
+          ],
+          "acceptance": "Header 在亮暗主题下均正确显示，项目可切换",
+          "depends_on": ["T3-3"]
+        },
+        {
+          "id": "T3-5",
+          "name": "实现 StatsBar 组件",
+          "description": "顶部 5 个统计卡片",
+          "steps": [
+            "在 src/components/layout/StatsBar.tsx 中实现",
+            "5 张卡片：总 Input Tokens、总 Output Tokens、Cache Read、请求数、活跃时长",
+            "每张卡片包含：标签（小字灰色）、数值（大字彩色 JetBrains Mono）、副文字（完整数字或 req/min 等）",
+            "数值格式化：用 src/lib/format.ts 中的 fmtK() 函数（>1M 显示 1.2M，>1K 显示 45.3K）",
+            "数据从 dataStore 读取",
+            "卡片带 hover 微动效"
+          ],
+          "acceptance": "5 张卡片正确展示数据，数值格式化正确",
+          "depends_on": ["T3-2"]
+        },
+        {
+          "id": "T3-6",
+          "name": "实现 App 整体布局",
+          "description": "组装页面骨架",
+          "steps": [
+            "在 src/App.tsx 中实现整体布局",
+            "结构：Header → StatsBar → Dashboard Grid（左侧主图表 + 右侧面板列 + 底部表格）",
+            "Dashboard Grid 使用 CSS Grid：左列 1fr，右列 340px",
+            "右列内两个面板纵向排列：模型分布 + 窗口预测",
+            "底部表格横跨全宽",
+            "每个图表区域先放占位框（显示图表名称 + 'Coming Soon'），后续 task 逐个替换",
+            "响应式：窄屏时改为单列"
+          ],
+          "acceptance": "整体布局与设计文档第 7.1 节一致，占位框在亮暗主题下正确显示",
+          "depends_on": ["T3-4", "T3-5"]
+        }
+      ]
+    },
+    {
+      "id": "phase-4",
+      "name": "核心图表",
+      "description": "实现四大核心可视化组件",
+      "tasks": [
+        {
+          "id": "T4-1",
+          "name": "实现分钟级时间线 (F1)",
+          "description": "核心图表——多粒度 token 消耗时间线",
+          "steps": [
+            "在 src/components/charts/MinuteTimeline.tsx 中实现",
+            "使用 echarts-for-react 的 ReactECharts 组件",
+            "图表类型：堆叠面积图（type: line, areaStyle, stack）",
+            "三个 series：input_tokens（蓝色）、output_tokens（紫色）、cache_read_tokens（青色）",
+            "cache_read series 默认 selected: false（图例中取消勾选，即隐藏）",
+            "面积渐变填充：从 series 颜色到透明",
+            "顶部 Tab 切换：小时级（默认，最近10h，分钟聚合）/ 天级（最近7天，小时聚合）/ 月级（最近3月，天聚合）",
+            "切换时从 dataStore 获取对应粒度的聚合数据，setOption 重新渲染",
+            "底部 dataZoom 滑动条：默认显示最近 2 小时范围（小时级视图时）",
+            "交互：hover 显示 tooltip（时间、input、output、cache、请求数），鼠标框选放大（toolbox brush）",
+            "模型切换标注：从 dataStore.modelSwitches 读取，用 markLine 竖虚线标注",
+            "点击事件：点击某个数据点时，dispatch action 通知 SessionTable 高亮对应时间段的 session",
+            "ECharts theme 跟随当前主题"
+          ],
+          "acceptance": "三个时间级别均可切换，面积图正确堆叠，cache 默认隐藏可勾选，dataZoom 可拖拽，tooltip 正确",
+          "depends_on": ["T3-6"]
+        },
+        {
+          "id": "T4-2",
+          "name": "实现模型用量分布 (F2)",
+          "description": "环形图 + 详情列表",
+          "steps": [
+            "在 src/components/charts/ModelPie.tsx 中实现",
+            "ECharts 环形图：type: pie, radius: ['55%', '80%']",
+            "中心显示总 token 数（input+output，不含 cache）：用 graphic 组件叠加文字",
+            "扇区渐变色填充，hover 时微微外扩（hoverOffset: 8）",
+            "数据联动：监听 dataStore 的时间范围变化，当 F1 切换视图或框选时自动重新聚合",
+            "下方列表：每个模型一行，显示模型名、token总量、占比、请求数、平均token/请求",
+            "列表使用 shadcn/ui 的样式，带进度条展示占比"
+          ],
+          "acceptance": "环形图正确显示模型分布，联动 F1 时间范围，列表数据正确",
+          "depends_on": ["T3-6"]
+        },
+        {
+          "id": "T4-3",
+          "name": "实现 5 小时窗口预测 (F4)",
+          "description": "环形进度图 + 告警",
+          "steps": [
+            "在 src/components/charts/WindowGauge.tsx 中实现",
+            "ECharts gauge 类型：type: gauge, 环形样式",
+            "环形配色：0-50% 绿色, 50-80% 渐变黄, 80-95% 渐变橙, 95-100% 红色",
+            "中心大字：剩余百分比（如 '62%'），副文字 '剩余额度'",
+            "下方数据行：已消耗/总额度（如 '45.2K / 220K'）",
+            "时间选择器：用 shadcn/ui 的 input type=datetime-local，用户手动设定窗口起始时间",
+            "Plan 选择器：下拉选 Pro(44K)/Max5(88K)/Max20(220K)/Custom，选 Custom 时出现输入框",
+            "计算逻辑：已消耗 = 窗口内 input+output（不含cache），使用率 = 已消耗/plan限额",
+            "状态处理：已过期显示灰色'已过期'，超限显示红色'已超限'，未设置显示提示",
+            "Plan 和窗口起始时间持久化到 settingsStore"
+          ],
+          "acceptance": "环形进度图正确显示，颜色随使用率渐变，Plan 切换生效，过期/超限状态正确",
+          "depends_on": ["T3-6"]
+        },
+        {
+          "id": "T4-4",
+          "name": "实现 Session 表格 (F3)",
+          "description": "可展开行的 Session / Subagent 明细表",
+          "steps": [
+            "在 src/components/tables/SessionTable.tsx 中实现",
+            "表格列：展开箭头(32px)、Session标题(flex)、时间范围(120px)、模型(100px)、Input(80px)、Output(80px)、Cache(80px)、请求数(60px)、平均耗时(80px)、占比条(120px)",
+            "主 Session 行：标题为首条用户纯文本消息（截断60字符），无消息时显示 sessionId 前12位",
+            "展开行：有 subagent 的 session 显示展开箭头 ▶，点击展开/折叠 subagent 行",
+            "Subagent 行：左侧缩进 24px，显示 agentId 前12位 + 紫色 'subagent' 标签",
+            "占比条：堆叠百分比条（input蓝/output紫/cache青）+ 百分比文字",
+            "平均耗时：从 system.turn_duration 记录计算（durationMs 的平均值），格式 'Xs'",
+            "排序：默认按首条记录时间倒序",
+            "联动 F1：接收 F1 点击事件，高亮对应时间段的 session 行（背景色变化）",
+            "默认全部折叠",
+            "使用虚拟滚动或限制显示条数（session 很多时的性能考虑，P2 优化）"
+          ],
+          "acceptance": "表格正确显示所有 session，subagent 可展开/折叠，点击 F1 时间线能高亮对应行",
+          "depends_on": ["T3-6"]
+        }
+      ]
+    },
+    {
+      "id": "phase-5",
+      "name": "实时监控接入",
+      "description": "接入 chokidar 文件监控，实现真正的实时数据更新",
+      "tasks": [
+        {
+          "id": "T5-1",
+          "name": "实现文件监控服务 (F5)",
+          "description": "chokidar 监控 JSONL 目录变化",
+          "steps": [
+            "在 electron/services/watcher.ts 中实现 FileWatcher 类",
+            "构造参数：watchDir（默认 ~/.claude/projects/）",
+            "使用 chokidar.watch 监控 watchDir 下的 **/*.jsonl",
+            "配置：awaitWriteFinish: { stabilityThreshold: 300, pollInterval: 100 }, ignoreInitial: false",
+            "监听事件：add（新文件）→ 全量解析该文件；change（文件变化）→ 增量解析",
+            "500ms 防抖：收集短时间内的多个变化事件，批量处理",
+            "变化处理后通过回调通知上层（主进程 main.ts）",
+            "提供 start() / stop() / getStatus() 方法",
+            "错误处理：chokidar 错误事件 → 记录日志 + 通知渲染进程"
+          ],
+          "acceptance": "启动后能检测到 JSONL 文件的新增和变化，正确触发增量解析",
+          "depends_on": ["T2-3"]
+        },
+        {
+          "id": "T5-2",
+          "name": "在主进程中集成文件监控",
+          "description": "将 FileWatcher 集成到 Electron 主进程",
+          "steps": [
+            "在 electron/main.ts 中实例化 FileWatcher",
+            "应用启动时自动开始监控（读取 settings 中的 claudeDataDir）",
+            "FileWatcher 回调中：更新 FileCache → 重新聚合 → 通过 webContents.send(DATA_UPDATED) 推送到渲染进程",
+            "提供 IPC handler：REFRESH → 手动触发全量重新扫描",
+            "提供 IPC handler：WATCH_STATUS → 返回当前监控状态（watching/stopped/error）",
+            "应用退出时调用 watcher.stop() 清理"
+          ],
+          "acceptance": "应用启动后自动监控，Claude Code 写入 JSONL 时仪表盘自动更新",
+          "depends_on": ["T5-1", "T2-6"]
+        },
+        {
+          "id": "T5-3",
+          "name": "渲染进程接入实时数据",
+          "description": "前端响应实时数据推送",
+          "steps": [
+            "在 useTokenData hook 中监听 DATA_UPDATED 事件",
+            "收到事件后重新调用 getTokenData 获取最新数据",
+            "更新 dataStore，触发所有图表组件重新渲染",
+            "Header 状态指示灯：收到更新时绿点闪烁 1 秒 + 更新时间文字",
+            "ECharts 图表使用 notMerge: false 实现增量更新（不重建图表实例）"
+          ],
+          "acceptance": "文件变化后 1 秒内图表自动刷新，状态栏显示更新时间",
+          "depends_on": ["T5-2", "T4-1", "T4-2", "T4-3", "T4-4"]
+        }
+      ]
+    },
+    {
+      "id": "phase-6",
+      "name": "打磨与发布",
+      "description": "空状态处理、打包测试、README 文档",
+      "tasks": [
+        {
+          "id": "T6-1",
+          "name": "空状态和错误处理",
+          "description": "各种边界情况的 UI 处理",
+          "steps": [
+            "首次启动无数据时：显示欢迎页面，引导用户确认 ~/.claude/projects/ 路径",
+            "有项目但无 token 数据时：图表区域显示 EmptyState 组件（图标 + 提示文字）",
+            "文件监控出错时：Header 显示黄色警告图标，点击查看错误详情",
+            "JSONL 解析失败时：静默跳过，不影响其他数据",
+            "F4 窗口未设置时：显示提示引导用户设置",
+            "网络无关：本应用不需要网络，确保离线可用"
+          ],
+          "acceptance": "所有空状态和错误场景有友好提示，不出现白屏或 crash",
+          "depends_on": ["T5-3"]
+        },
+        {
+          "id": "T6-2",
+          "name": "Windows 打包测试",
+          "description": "在 Windows 上构建安装包",
+          "steps": [
+            "运行 pnpm build 构建 Electron 应用",
+            "检查 dist/ 输出目录，确认生成 .exe 安装包",
+            "安装到 Windows，验证以下功能：",
+            "  - 应用启动正常",
+            "  - 自动检测到 ~/.claude/projects/ 并开始监控",
+            "  - 图表正确显示数据",
+            "  - 主题切换正常",
+            "  - 关闭并重新打开，设置保留",
+            "修复打包过程中发现的问题"
+          ],
+          "acceptance": "Windows 安装包可正常安装和运行",
+          "depends_on": ["T6-1"]
+        },
+        {
+          "id": "T6-3",
+          "name": "编写 README",
+          "description": "项目文档",
+          "steps": [
+            "编写 README.md，包含以下章节：",
+            "  - 项目简介 + 截图（开发完成后截图）",
+            "  - Features 列表",
+            "  - Download（GitHub Release 链接占位）",
+            "  - Quick Start（安装和使用说明）",
+            "  - Development（开发环境搭建：git clone → pnpm install → pnpm dev）",
+            "  - Tech Stack 表格",
+            "  - Contributing 简要说明",
+            "  - License（MIT）",
+            "创建 LICENSE 文件（MIT）",
+            "创建 CHANGELOG.md（v0.1.0 初始版本）",
+            "创建 .github/workflows/ci.yml（PR 检查：lint + type-check + build）"
+          ],
+          "acceptance": "README 完整清晰，新用户能按文档跑起来",
+          "depends_on": ["T6-2"]
+        }
+      ]
+    }
+  ],
+  "execution_notes": {
+    "test_data": "将用户提供的两个 JSONL 样本文件（9b263f22-3312-4ce9-a228-3417516b71f0.jsonl 和 agent-a0df1a849c5582422.jsonl）放到 test/fixtures/ 目录，作为开发和测试数据",
+    "task_execution_order": "严格按 depends_on 依赖关系执行，同一 phase 内无依赖的 task 可并行",
+    "per_task_workflow": "每个 task 完成后：1) 确保 TypeScript 编译通过 2) 确保 ESLint 无错误 3) 运行 pnpm dev 确认不影响现有功能",
+    "design_doc_reference": "完整设计文档在 CLAUDE.md 中，所有类型定义、IPC 频道、数据模型等细节以设计文档为准",
+    "total_tasks": 26,
+    "estimated_phases": "Phase 1-2 打基础（~2天），Phase 3-4 核心 UI（~2天），Phase 5-6 接入和打磨（~1天）"
+  }
+}

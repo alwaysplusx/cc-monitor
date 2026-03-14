@@ -1,0 +1,83 @@
+/* Global styles: Tailwind CSS v4 + shadcn/ui theme variables */
+@import 'tailwindcss';
+
+@custom-variant dark (&:is(.dark *));
+
+/* shadcn/ui CSS variables + project theme */
+:root {
+  --background: #f5f7fa;
+  --foreground: #1a202c;
+  --card: #ffffff;
+  --card-foreground: #1a202c;
+  --popover: #ffffff;
+  --popover-foreground: #1a202c;
+  --primary: #3b82f6;
+  --primary-foreground: #ffffff;
+  --secondary: #f1f5f9;
+  --secondary-foreground: #1a202c;
+  --muted: #f1f5f9;
+  --muted-foreground: #64748b;
+  --accent: #f1f5f9;
+  --accent-foreground: #1a202c;
+  --destructive: #ef4444;
+  --destructive-foreground: #ffffff;
+  --border: #e2e8f0;
+  --input: #e2e8f0;
+  --ring: #3b82f6;
+  --radius: 0.5rem;
+
+  /* project-specific colors */
+  --color-blue: #3b82f6;
+  --color-purple: #8b5cf6;
+  --color-cyan: #06b6d4;
+  --color-green: #10b981;
+
+  --text-primary: #1a202c;
+  --text-secondary: #64748b;
+  --text-tertiary: #94a3b8;
+
+  --bg-base: #f5f7fa;
+  --bg-card: #ffffff;
+}
+
+.dark {
+  --background: #0a0e17;
+  --foreground: #e2e8f0;
+  --card: #111827;
+  --card-foreground: #e2e8f0;
+  --popover: #111827;
+  --popover-foreground: #e2e8f0;
+  --primary: #3b82f6;
+  --primary-foreground: #ffffff;
+  --secondary: #151d2e;
+  --secondary-foreground: #e2e8f0;
+  --muted: #151d2e;
+  --muted-foreground: #8892a8;
+  --accent: #151d2e;
+  --accent-foreground: #e2e8f0;
+  --destructive: #ef4444;
+  --destructive-foreground: #ffffff;
+  --border: #1e293b;
+  --input: #1e293b;
+  --ring: #3b82f6;
+
+  --text-primary: #e2e8f0;
+  --text-secondary: #8892a8;
+  --text-tertiary: #4a5568;
+
+  --bg-base: #0a0e17;
+  --bg-card: #111827;
+}
+
+/* Base styles */
+body {
+  background-color: var(--background);
+  color: var(--foreground);
+  font-family:
+    -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+}
+
+/* Monospace font for numbers */
+.font-mono {
+  font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace;
+}
