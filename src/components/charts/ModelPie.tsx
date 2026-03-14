@@ -87,7 +87,7 @@ export default function ModelPie() {
       <h3 className="mb-2 text-xs font-semibold text-[var(--foreground)]">模型分布</h3>
 
       {hasData ? (
-        <>
+        <div className="flex min-h-0 flex-1 flex-col">
           <ReactECharts
             option={option}
             style={{ height: 160 }}
@@ -95,11 +95,11 @@ export default function ModelPie() {
           />
 
           {/* Model detail list */}
-          <div className="mt-2 space-y-1.5">
+          <div className="mt-2 max-h-[88px] space-y-1.5 overflow-y-auto">
             {modelSummaries.map((m, i) => (
               <div key={m.model} className="flex items-center gap-2 text-xs">
                 <span
-                  className="h-2.5 w-2.5 rounded-full"
+                  className="h-2.5 w-2.5 shrink-0 rounded-full"
                   style={{ backgroundColor: MODEL_COLORS[i % MODEL_COLORS.length] }}
                 />
                 <span className="flex-1 truncate text-[var(--foreground)]">{m.model}</span>
@@ -112,7 +112,7 @@ export default function ModelPie() {
               </div>
             ))}
           </div>
-        </>
+        </div>
       ) : (
         <div className="flex flex-1 items-center justify-center text-xs text-[var(--muted-foreground)]">
           暂无模型数据

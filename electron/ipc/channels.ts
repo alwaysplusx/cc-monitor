@@ -7,6 +7,7 @@ export const IPC = {
   GET_SETTINGS: 'get-settings',
   SAVE_SETTINGS: 'save-settings',
   EXPORT_DATA: 'export-data',
+  OPEN_DIRECTORY: 'open-directory',
   REFRESH: 'refresh',
 
   // Main → Renderer (push events)

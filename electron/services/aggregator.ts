@@ -8,7 +8,6 @@ import type {
   ModelSummary,
   SessionSummary,
   ModelSwitch,
-  WindowUsage,
 } from '../../src/types/data'
 
 function filterByTimeRange(
@@ -246,6 +245,8 @@ export function aggregateBySession(
       isSubagent: first.isSubagent,
       agentId: first.agentId,
       model: first.model,
+      projectPath: first.projectPath,
+      sessionFilePath: first.fileName,
       firstTimestamp: first.timestamp,
       lastTimestamp: last.timestamp,
       firstUserMessage: userMessages.get(first.sessionId) || first.sessionId.slice(0, 12),
@@ -279,29 +280,3 @@ export function detectModelSwitches(records: TokenRecord[]): ModelSwitch[] {
   return switches
 }
 
-/**
- * Calculate token usage within a sliding time window.
- */
-export function calculateWindowUsage(
-  records: TokenRecord[],
-  windowStart: Date,
-  windowDurationMs: number,
-  planLimit: number,
-): WindowUsage {
-  const windowEnd = new Date(windowStart.getTime() + windowDurationMs)
-  const now = new Date()
-  const isExpired = now > windowEnd
-
-  const inWindow = records.filter(
-    (r) => r.timestamp >= windowStart && r.timestamp <= windowEnd,
-  )
-
-  const used = inWindow.reduce((s, r) => s + r.inputTokens + r.outputTokens, 0)
-
-  return {
-    used,
-    limit: planLimit,
-    percentage: planLimit > 0 ? (used / planLimit) * 100 : 0,
-    isExpired,
-  }
-}

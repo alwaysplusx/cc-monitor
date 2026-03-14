@@ -17,6 +17,7 @@ export const electronApi = {
   getTokenData: (projectPath: string) => getApi().getTokenData(projectPath),
   refreshData: () => getApi().refreshData(),
   selectDirectory: () => getApi().selectDirectory(),
+  openDirectory: (dirPath: string) => getApi().openDirectory(dirPath),
   getSettings: () => getApi().getSettings(),
   saveSettings: (settings: Parameters<ElectronAPI['saveSettings']>[0]) =>
     getApi().saveSettings(settings),

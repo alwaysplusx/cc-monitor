@@ -9,9 +9,10 @@ interface StatCardProps {
   subtext: string
   color: string
   tooltip?: string
+  tooltipAlign?: 'left' | 'right'
 }
 
-function StatCard({ label, value, subtext, color, tooltip }: StatCardProps) {
+function StatCard({ label, value, subtext, color, tooltip, tooltipAlign = 'right' }: StatCardProps) {
   return (
     <div className="relative flex flex-1 flex-col gap-1 rounded-lg border border-[var(--border)] bg-[var(--card)] p-3 transition-colors hover:border-[var(--primary)]">
       <div className="flex items-center gap-1">
@@ -23,7 +24,7 @@ function StatCard({ label, value, subtext, color, tooltip }: StatCardProps) {
               <path d="M12 16v-4" />
               <path d="M12 8h.01" />
             </svg>
-            <span className="pointer-events-none absolute left-1/2 top-5 z-50 hidden -translate-x-1/2 whitespace-nowrap rounded-md border border-[var(--border)] bg-[var(--popover)] px-2.5 py-1.5 text-xs text-[var(--popover-foreground)] shadow-md group-hover/tip:block">
+            <span className={`pointer-events-none absolute top-5 z-50 hidden w-44 rounded-md border border-[var(--border)] bg-[var(--popover)] px-2.5 py-1.5 text-xs leading-relaxed text-[var(--popover-foreground)] shadow-md group-hover/tip:block ${tooltipAlign === 'left' ? 'left-0' : 'right-0'}`}>
               {tooltip}
             </span>
           </span>
@@ -43,19 +44,28 @@ export default function StatsBar() {
   const totalCacheRead = records.reduce((s, r) => s + r.cacheReadTokens, 0)
   const requestCount = records.length
 
+  // Last 5 hours stats
+  const fiveHoursAgo = new Date(Date.now() - 5 * 60 * 60 * 1000)
+  const recent = records.filter((r) => r.timestamp >= fiveHoursAgo)
+  const recentInput = recent.reduce((s, r) => s + r.inputTokens, 0)
+  const recentOutput = recent.reduce((s, r) => s + r.outputTokens, 0)
+  const recentCache = recent.reduce((s, r) => s + r.cacheReadTokens, 0)
+  const recentTotal = recentInput + recentOutput
+
   // Calculate active duration: from first to last record timestamp
   const timestamps = records.map((r) => r.timestamp.getTime()).filter((t) => t > 0)
   const activeDurationMs =
     timestamps.length > 1 ? Math.max(...timestamps) - Math.min(...timestamps) : 0
 
   return (
-    <div className="flex gap-3 p-4">
+    <div className="grid grid-cols-3 gap-3 p-4">
       <StatCard
         label="输入 Token"
         value={fmtK(totalInput)}
         subtext={fmtN(totalInput)}
         color="text-blue-500"
         tooltip="发送给模型的 Token 总量（所有项目累计）"
+        tooltipAlign="left"
       />
       <StatCard
         label="输出 Token"
@@ -77,6 +87,13 @@ export default function StatsBar() {
         subtext={`共 ${requestCount} 次`}
         color="text-green-500"
         tooltip="所有项目的 API 请求次数累计"
+      />
+      <StatCard
+        label="近5小时"
+        value={fmtK(recentTotal)}
+        subtext={`入 ${fmtK(recentInput)} / 出 ${fmtK(recentOutput)} / 缓存 ${fmtK(recentCache)} / ${recent.length}次`}
+        color="text-rose-500"
+        tooltip="最近5小时的输入+输出 Token 合计"
       />
       <StatCard
         label="活跃时长"

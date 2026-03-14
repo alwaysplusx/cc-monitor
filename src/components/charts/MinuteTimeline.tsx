@@ -8,10 +8,13 @@ import { echartsLightTheme, echartsDarkTheme } from '../../lib/theme'
 import { fmtK } from '../../lib/format'
 import { CHART_COLORS, type TimeView } from '../../lib/constants'
 
+const MODEL_COLORS = ['#3b82f6', '#8b5cf6', '#06b6d4', '#10b981', '#f59e0b', '#ef4444']
+
 export default function MinuteTimeline() {
   const minuteBuckets = useDataStore((s) => s.minuteBuckets)
   const dayBuckets = useDataStore((s) => s.dayBuckets)
   const monthBuckets = useDataStore((s) => s.monthBuckets)
+  const tokenRecords = useDataStore((s) => s.tokenRecords)
   const modelSwitches = useDataStore((s) => s.modelSwitches)
   const timeView = useDataStore((s) => s.timeView)
   const setTimeView = useDataStore((s) => s.setTimeView)
@@ -25,7 +28,7 @@ export default function MinuteTimeline() {
     { key: 'month', label: '月' },
   ]
 
-  const { xData, inputData, outputData, cacheData, defaultStartPct } = useMemo(() => {
+  const { xData, inputData, outputData, cacheData, defaultStartPct, modelBreakdownMap } = useMemo(() => {
     const p2 = (n: number) => n.toString().padStart(2, '0')
     const fmtSlotKey = (d: Date) =>
       `${d.getFullYear()}-${p2(d.getMonth() + 1)}-${p2(d.getDate())}T${p2(d.getHours())}:${p2(d.getMinutes())}`
@@ -33,6 +36,27 @@ export default function MinuteTimeline() {
       `${d.getFullYear()}-${p2(d.getMonth() + 1)}-${p2(d.getDate())}`
     const fmtMonthKey = (d: Date) =>
       `${d.getFullYear()}-${p2(d.getMonth() + 1)}`
+
+    // Build model breakdown map from tokenRecords
+    type ModelEntry = { model: string; input: number; output: number }
+    const mbMap = new Map<string, Map<string, ModelEntry>>()
+    const addToMb = (key: string, model: string, input: number, output: number) => {
+      let models = mbMap.get(key)
+      if (!models) { models = new Map(); mbMap.set(key, models) }
+      const entry = models.get(model) ?? { model, input: 0, output: 0 }
+      entry.input += input
+      entry.output += output
+      models.set(model, entry)
+    }
+    for (const r of tokenRecords) {
+      const d = r.timestamp
+      // Add to all three granularities
+      const slotMin = d.getMinutes() < 30 ? '00' : '30'
+      const slotKey = `${d.getFullYear()}-${p2(d.getMonth() + 1)}-${p2(d.getDate())}T${p2(d.getHours())}:${slotMin}`
+      addToMb(slotKey, r.model, r.inputTokens, r.outputTokens)
+      addToMb(fmtDayKey(d), r.model, r.inputTokens, r.outputTokens)
+      addToMb(fmtMonthKey(d), r.model, r.inputTokens, r.outputTokens)
+    }
 
     if (timeView === 'hour') {
       // All data as 30-min slots, gap-filled from earliest to now
@@ -76,6 +100,7 @@ export default function MinuteTimeline() {
         outputData: slots.map((s) => s.output),
         cacheData: slots.map((s) => s.cache),
         defaultStartPct: startPct,
+        modelBreakdownMap: mbMap,
       }
     } else if (timeView === 'day') {
       // All days from earliest to today, gap-filled, minimum 14 days
@@ -112,6 +137,7 @@ export default function MinuteTimeline() {
         outputData: days.map((d) => d.output),
         cacheData: days.map((d) => d.cache),
         defaultStartPct: startPct,
+        modelBreakdownMap: mbMap,
       }
     } else {
       // All months from earliest to current, gap-filled, minimum 12 months
@@ -145,9 +171,10 @@ export default function MinuteTimeline() {
         outputData: months.map((m) => m.output),
         cacheData: months.map((m) => m.cache),
         defaultStartPct: startPct,
+        modelBreakdownMap: mbMap,
       }
     }
-  }, [timeView, minuteBuckets, dayBuckets, monthBuckets])
+  }, [timeView, minuteBuckets, dayBuckets, monthBuckets, tokenRecords])
 
   const markLines = useMemo(() => {
     return modelSwitches.map((sw) => ({
@@ -171,10 +198,24 @@ export default function MinuteTimeline() {
         formatter: (params: unknown) => {
           const items = params as Array<{ seriesName: string; value: number; axisValue: string }>
           if (!items.length) return ''
-          const time = items[0].axisValue.replace('T', ' ')
+          const axisKey = items[0].axisValue
+          const time = axisKey.replace('T', ' ')
           let html = `<div style="font-size:12px"><b>${time}</b><br/>`
           for (const item of items) {
             html += `${item.seriesName}: ${fmtK(item.value)}<br/>`
+          }
+          // Model breakdown
+          const models = modelBreakdownMap.get(axisKey)
+          if (models && models.size > 0) {
+            const sorted = Array.from(models.values()).sort((a, b) => (b.input + b.output) - (a.input + a.output))
+            const total = sorted.reduce((s, m) => s + m.input + m.output, 0)
+            html += `<br/><b>模型分布</b><br/>`
+            sorted.forEach((m, i) => {
+              const pct = total > 0 ? ((m.input + m.output) / total * 100).toFixed(0) : '0'
+              const color = MODEL_COLORS[i % MODEL_COLORS.length]
+              html += `<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${color};margin-right:4px"></span>`
+              html += `${m.model} <span style="float:right;margin-left:12px">${pct}%  ${fmtK(m.input)}/${fmtK(m.output)}</span><br/>`
+            })
           }
           html += '</div>'
           return html
@@ -286,7 +327,7 @@ export default function MinuteTimeline() {
         },
       ],
     }
-  }, [xData, inputData, outputData, cacheData, markLines, isDark, defaultStartPct, timeView])
+  }, [xData, inputData, outputData, cacheData, markLines, isDark, defaultStartPct, timeView, modelBreakdownMap])
 
   const onChartClick = useCallback(
     (params: { dataIndex?: number }) => {

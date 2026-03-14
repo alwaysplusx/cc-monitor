@@ -1,6 +1,5 @@
 // JSONL incremental parser for extracting token records from Claude Code logs
 import { readFileSync } from 'fs'
-import { basename } from 'path'
 import type { RawRecord, TokenRecord } from '../../src/types/data'
 
 export interface ParseResult {
@@ -20,7 +19,7 @@ export function parseJsonlFile(filePath: string, startLine = 0): ParseResult {
   const tokenRecords: TokenRecord[] = []
   const userMessages = new Map<string, string>()
   const turnDurations = new Map<string, number[]>()
-  const fileName = basename(filePath)
+  const fileName = filePath
 
   for (let i = startLine; i < lines.length; i++) {
     const line = lines[i].trim()

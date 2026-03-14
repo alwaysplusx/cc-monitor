@@ -10,7 +10,6 @@ import type {
   ModelSummary,
   SessionSummary,
   ModelSwitch,
-  WindowUsage,
 } from '../types/data'
 import type { TimeView } from '../lib/constants'
 
@@ -30,8 +29,6 @@ interface DataState {
   modelSummaries: ModelSummary[]
   sessionSummaries: SessionSummary[]
   modelSwitches: ModelSwitch[]
-  windowUsage: WindowUsage | null
-
   // View state
   timeView: TimeView
   lastUpdated: Date | null
@@ -51,7 +48,6 @@ interface DataState {
     modelSwitches: ModelSwitch[]
   }) => void
   setTimeView: (view: TimeView) => void
-  setWindowUsage: (usage: WindowUsage | null) => void
   setHighlightedTimeRange: (range: { start: string; end: string } | null) => void
   setLastUpdated: (date: Date) => void
 }
@@ -67,7 +63,6 @@ export const useDataStore = create<DataState>((set) => ({
   modelSummaries: [],
   sessionSummaries: [],
   modelSwitches: [],
-  windowUsage: null,
   timeView: 'hour',
   lastUpdated: null,
   highlightedTimeRange: null,
@@ -90,8 +85,6 @@ export const useDataStore = create<DataState>((set) => ({
     }),
 
   setTimeView: (view) => set({ timeView: view }),
-
-  setWindowUsage: (usage) => set({ windowUsage: usage }),
 
   setHighlightedTimeRange: (range) => set({ highlightedTimeRange: range }),
 

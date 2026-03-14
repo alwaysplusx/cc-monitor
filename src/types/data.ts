@@ -111,6 +111,8 @@ export interface SessionSummary {
   isSubagent: boolean
   agentId: string
   model: string
+  projectPath: string
+  sessionFilePath: string
   firstTimestamp: Date
   lastTimestamp: Date
   firstUserMessage: string
@@ -154,12 +156,4 @@ export interface ModelSwitch {
   timestamp: Date
   fromModel: string
   toModel: string
-}
-
-// Window usage calculation result
-export interface WindowUsage {
-  used: number
-  limit: number
-  percentage: number
-  isExpired: boolean
 }

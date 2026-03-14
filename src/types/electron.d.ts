@@ -27,6 +27,7 @@ export interface ElectronAPI {
   refreshData(): Promise<void>
   selectDirectory(): Promise<string | null>
   exportData(format: 'csv' | 'json', data: object): Promise<string>
+  openDirectory(dirPath: string): Promise<void>
   getSettings(): Promise<AppSettings>
   saveSettings(settings: Partial<AppSettings>): Promise<void>
   onDataUpdated(callback: (projectPath: string) => void): () => void

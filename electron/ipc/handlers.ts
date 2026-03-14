@@ -1,5 +1,5 @@
 // IPC request handlers registered on ipcMain
-import { ipcMain, dialog, BrowserWindow } from 'electron'
+import { ipcMain, dialog, shell, BrowserWindow } from 'electron'
 import { IPC } from './channels'
 import { FileCache } from '../services/cache'
 import { scanProjects, getDefaultClaudeDir } from '../services/project-scanner'
@@ -62,6 +62,10 @@ export function registerIpcHandlers(): void {
   ipcMain.handle(IPC.SAVE_SETTINGS, (_event, partial: Partial<AppSettings>) => {
     const current = readSettings()
     writeSettings({ ...current, ...partial })
+  })
+
+  ipcMain.handle(IPC.OPEN_DIRECTORY, (_event, filePath: string) => {
+    shell.showItemInFolder(filePath)
   })
 
   ipcMain.handle(IPC.REFRESH, () => {
