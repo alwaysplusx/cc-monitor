@@ -13,6 +13,10 @@ Claude Code Token 消耗监控 Electron 桌面应用。
 - electron-builder (打包)
 - pnpm (包管理)
 
+## 对话规范
+
+- 始终使用用户的语言进行对话（用户用中文则回复中文，用英文则回复英文）
+
 ## 代码规范
 
 - TypeScript strict mode，所有文件顶部加简要注释说明职责

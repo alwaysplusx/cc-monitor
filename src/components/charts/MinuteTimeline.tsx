@@ -53,9 +53,17 @@ export default function MinuteTimeline() {
         return { xData: [] as string[], inputData: [] as number[], outputData: [] as number[], cacheData: [] as number[], defaultStartPct: 0 }
       }
 
-      // Fill from earliest slot to now
+      // Default view: last 6 hours (12 slots), total range 24 hours (48 slots)
+      const defaultSlots = 12
+      const totalSlots = 48
+
+      // Fill from minStart to now, ensuring at least totalSlots range
       const earliest = Array.from(slotMap.keys()).sort()[0]
-      const cursor = new Date(earliest.slice(0, 10) + 'T' + earliest.slice(11, 16) + ':00')
+      const earliestDate = new Date(earliest.slice(0, 10) + 'T' + earliest.slice(11, 16) + ':00')
+      const minStart = new Date(now)
+      minStart.setMinutes(minStart.getMinutes() - totalSlots * 30)
+      const cursor = earliestDate < minStart ? new Date(earliestDate) : new Date(minStart)
+
       const slots: Array<{ key: string; input: number; output: number; cache: number }> = []
       while (cursor <= now) {
         const key = fmtSlotKey(cursor)
@@ -64,8 +72,6 @@ export default function MinuteTimeline() {
         cursor.setMinutes(cursor.getMinutes() + 30)
       }
 
-      // Default view: last 6 hours (12 slots)
-      const defaultSlots = 12
       const startPct = slots.length > defaultSlots
         ? Math.max(0, ((slots.length - defaultSlots) / slots.length) * 100)
         : 0
@@ -78,7 +84,7 @@ export default function MinuteTimeline() {
         defaultStartPct: startPct,
       }
     } else if (timeView === 'day') {
-      // All days from earliest to today, gap-filled
+      // All days from earliest to today, gap-filled, minimum 14 days
       const now = new Date()
       const dayMap = new Map<string, { input: number; output: number; cache: number }>()
       for (const b of dayBuckets) {
@@ -89,10 +95,17 @@ export default function MinuteTimeline() {
         return { xData: [] as string[], inputData: [] as number[], outputData: [] as number[], cacheData: [] as number[], defaultStartPct: 0 }
       }
 
-      const earliest = Array.from(dayMap.keys()).sort()[0]
-      const cursor = new Date(earliest + 'T00:00:00')
       const today = new Date(now)
       today.setHours(0, 0, 0, 0)
+      const defaultDays = 14
+
+      // Ensure total range is larger than defaultDays so slider has room to move
+      const earliest = Array.from(dayMap.keys()).sort()[0]
+      const earliestDate = new Date(earliest + 'T00:00:00')
+      const minStart = new Date(today)
+      minStart.setDate(minStart.getDate() - defaultDays * 2 + 1)
+      const cursor = earliestDate < minStart ? new Date(earliestDate) : new Date(minStart)
+
       const days: Array<{ key: string; input: number; output: number; cache: number }> = []
       while (cursor <= today) {
         const key = fmtDayKey(cursor)
@@ -101,8 +114,6 @@ export default function MinuteTimeline() {
         cursor.setDate(cursor.getDate() + 1)
       }
 
-      // Default view: last 14 days
-      const defaultDays = 14
       const startPct = days.length > defaultDays
         ? Math.max(0, ((days.length - defaultDays) / days.length) * 100)
         : 0
@@ -115,7 +126,7 @@ export default function MinuteTimeline() {
         defaultStartPct: startPct,
       }
     } else {
-      // All months from earliest to current, gap-filled
+      // All months from earliest to current, gap-filled, minimum 12 months
       const now = new Date()
       const monthMap = new Map<string, { input: number; output: number; cache: number }>()
       for (const b of monthBuckets) {
@@ -126,8 +137,14 @@ export default function MinuteTimeline() {
         return { xData: [] as string[], inputData: [] as number[], outputData: [] as number[], cacheData: [] as number[], defaultStartPct: 0 }
       }
 
+      const defaultMonths = 12
+
+      // Ensure total range is larger than defaultMonths so slider has room to move
       const earliest = Array.from(monthMap.keys()).sort()[0]
-      const cursor = new Date(parseInt(earliest.slice(0, 4)), parseInt(earliest.slice(5, 7)) - 1, 1)
+      const earliestDate = new Date(parseInt(earliest.slice(0, 4)), parseInt(earliest.slice(5, 7)) - 1, 1)
+      const minStart = new Date(now.getFullYear(), now.getMonth() - defaultMonths * 2 + 1, 1)
+      const cursor = earliestDate < minStart ? new Date(earliestDate) : new Date(minStart)
+
       const months: Array<{ key: string; input: number; output: number; cache: number }> = []
       while (cursor.getFullYear() < now.getFullYear() || (cursor.getFullYear() === now.getFullYear() && cursor.getMonth() <= now.getMonth())) {
         const key = fmtMonthKey(cursor)
@@ -136,8 +153,6 @@ export default function MinuteTimeline() {
         cursor.setMonth(cursor.getMonth() + 1)
       }
 
-      // Default view: last 12 months
-      const defaultMonths = 12
       const startPct = months.length > defaultMonths
         ? Math.max(0, ((months.length - defaultMonths) / months.length) * 100)
         : 0
@@ -247,6 +262,7 @@ export default function MinuteTimeline() {
           height: 20,
           start: defaultStartPct,
           end: 100,
+          zoomLock: true,
         },
       ],
       series: [
@@ -323,6 +339,7 @@ export default function MinuteTimeline() {
       {/* Chart */}
       {hasData ? (
         <ReactECharts
+          key={timeView}
           ref={chartRef}
           option={option}
           style={{ flex: 1, minHeight: 250 }}
