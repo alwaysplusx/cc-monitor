@@ -81,7 +81,7 @@ export default function WindowGauge() {
             offsetCenter: [0, '-5%'],
             formatter: () =>
               usage?.isExpired
-                ? 'Expired'
+                ? '已过期'
                 : `${remaining.toFixed(0)}%`,
             fontSize: 22,
             fontWeight: 'bold',
@@ -95,7 +95,7 @@ export default function WindowGauge() {
             fontSize: 11,
             color: isDark ? '#8892a8' : '#64748b',
           },
-          data: [{ value: pct, name: usage?.isExpired ? 'Window expired' : 'Remaining' }],
+          data: [{ value: pct, name: usage?.isExpired ? '窗口已过期' : '剩余' }],
         },
       ],
     }
@@ -108,7 +108,7 @@ export default function WindowGauge() {
 
   return (
     <div className="flex h-full flex-col">
-      <h3 className="mb-2 text-xs font-semibold text-[var(--foreground)]">5h Window Usage</h3>
+      <h3 className="mb-2 text-xs font-semibold text-[var(--foreground)]">5小时窗口用量</h3>
 
       {/* Gauge chart */}
       <ReactECharts option={option} style={{ height: 120 }} notMerge={false} />
@@ -126,7 +126,7 @@ export default function WindowGauge() {
       <div className="space-y-2">
         {/* Window start time */}
         <div className="flex items-center gap-2">
-          <label className="text-xs text-[var(--muted-foreground)] whitespace-nowrap">Start:</label>
+          <label className="text-xs text-[var(--muted-foreground)] whitespace-nowrap">起始:</label>
           <input
             type="datetime-local"
             className="h-7 flex-1 rounded border border-[var(--border)] bg-[var(--background)] px-2 text-xs text-[var(--foreground)]"
@@ -137,7 +137,7 @@ export default function WindowGauge() {
 
         {/* Plan selector */}
         <div className="flex items-center gap-2">
-          <label className="text-xs text-[var(--muted-foreground)] whitespace-nowrap">Plan:</label>
+          <label className="text-xs text-[var(--muted-foreground)] whitespace-nowrap">套餐:</label>
           <select
             className="h-7 flex-1 rounded border border-[var(--border)] bg-[var(--background)] px-2 text-xs text-[var(--foreground)]"
             value={planType}
@@ -146,7 +146,7 @@ export default function WindowGauge() {
             <option value="pro">Pro (44K)</option>
             <option value="max5">Max5 (88K)</option>
             <option value="max20">Max20 (220K)</option>
-            <option value="custom">Custom</option>
+            <option value="custom">自定义</option>
           </select>
           {planType === 'custom' && (
             <input
@@ -154,7 +154,7 @@ export default function WindowGauge() {
               className="h-7 w-20 rounded border border-[var(--border)] bg-[var(--background)] px-2 text-xs text-[var(--foreground)]"
               value={customTokenLimit}
               onChange={(e) => setCustomTokenLimit(Number(e.target.value))}
-              placeholder="Limit"
+              placeholder="上限"
             />
           )}
         </div>

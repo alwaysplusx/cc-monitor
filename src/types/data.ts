@@ -94,6 +94,16 @@ export interface DayBucket {
   requestCount: number
 }
 
+// Month-level aggregation bucket
+export interface MonthBucket {
+  month: string // 'YYYY-MM'
+  input: number
+  output: number
+  cacheRead: number
+  cacheCreate: number
+  requestCount: number
+}
+
 // Session-level aggregation summary
 export interface SessionSummary {
   id: string

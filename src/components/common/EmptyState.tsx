@@ -9,18 +9,18 @@ interface EmptyStateProps {
 const configs = {
   welcome: {
     icon: FolderSearch,
-    title: 'Welcome to CC Monitor',
-    description: 'Monitoring ~/.claude/projects/ for Claude Code token usage data. Start a Claude Code session to see data here.',
+    title: '欢迎使用 CC Monitor',
+    description: '正在监控 ~/.claude/projects/ 下的 Claude Code Token 用量数据。启动一个 Claude Code 会话即可在此查看数据。',
   },
   'no-data': {
     icon: BarChart3,
-    title: 'No Token Data',
-    description: 'This project has no token usage records yet. Use Claude Code in this project to generate data.',
+    title: '暂无 Token 数据',
+    description: '当前没有 Token 用量记录。使用 Claude Code 后将自动生成数据。',
   },
   error: {
     icon: AlertCircle,
-    title: 'Something went wrong',
-    description: 'An error occurred while loading data.',
+    title: '出错了',
+    description: '加载数据时发生错误。',
   },
 }
 

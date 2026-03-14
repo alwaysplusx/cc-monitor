@@ -40,10 +40,10 @@ export default function ModelPie() {
         {
           type: 'text',
           left: 'center',
-          top: '38%',
+          top: '35%',
           style: {
             text: fmtK(totalTokens),
-            fontSize: 18,
+            fontSize: 16,
             fontWeight: 'bold',
             fontFamily: 'JetBrains Mono, monospace',
             fill: isDark ? '#e2e8f0' : '#1a202c',
@@ -53,10 +53,10 @@ export default function ModelPie() {
         {
           type: 'text',
           left: 'center',
-          top: '50%',
+          top: '48%',
           style: {
-            text: 'Total Tokens',
-            fontSize: 11,
+            text: '总计',
+            fontSize: 10,
             fill: isDark ? '#8892a8' : '#64748b',
             textAlign: 'center',
           },
@@ -65,8 +65,8 @@ export default function ModelPie() {
       series: [
         {
           type: 'pie',
-          radius: ['55%', '80%'],
-          center: ['50%', '45%'],
+          radius: ['45%', '70%'],
+          center: ['50%', '42%'],
           data,
           label: { show: false },
           emphasis: {
@@ -83,7 +83,7 @@ export default function ModelPie() {
 
   return (
     <div className="flex h-full flex-col">
-      <h3 className="mb-2 text-xs font-semibold text-[var(--foreground)]">Model Distribution</h3>
+      <h3 className="mb-2 text-xs font-semibold text-[var(--foreground)]">模型分布</h3>
 
       {hasData ? (
         <>
@@ -114,7 +114,7 @@ export default function ModelPie() {
         </>
       ) : (
         <div className="flex flex-1 items-center justify-center text-xs text-[var(--muted-foreground)]">
-          No model data
+          暂无模型数据
         </div>
       )}
     </div>

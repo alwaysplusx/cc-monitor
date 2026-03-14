@@ -5,6 +5,7 @@ import type {
   MinuteBucket,
   HourBucket,
   DayBucket,
+  MonthBucket,
   ModelSummary,
   SessionSummary,
   ModelSwitch,
@@ -18,6 +19,7 @@ export interface ElectronAPI {
     minuteBuckets: MinuteBucket[]
     hourBuckets: HourBucket[]
     dayBuckets: DayBucket[]
+    monthBuckets: MonthBucket[]
     modelSummaries: ModelSummary[]
     sessionSummaries: SessionSummary[]
     modelSwitches: ModelSwitch[]

@@ -7,6 +7,7 @@ import {
   aggregateByMinute,
   aggregateByHour,
   aggregateByDay,
+  aggregateByMonth,
   aggregateByModel,
   aggregateBySession,
   detectModelSwitches,
@@ -25,14 +26,19 @@ export function registerIpcHandlers(): void {
     return scanProjects(settings.claudeDataDir)
   })
 
-  ipcMain.handle(IPC.GET_TOKEN_DATA, (_event, projectPath: string) => {
-    const records = fileCache.getRecordsByProject(projectPath)
+  ipcMain.handle(IPC.GET_TOKEN_DATA, () => {
+    // Load all project files under ~/.claude/projects/
+    const settings = readSettings()
+    const baseDir = settings.claudeDataDir || getDefaultClaudeDir()
+    fileCache.loadProjectFiles(baseDir)
+    const records = fileCache.getAllRecords()
     const userMessages = fileCache.getUserMessages()
     return {
       records,
       minuteBuckets: aggregateByMinute(records),
       hourBuckets: aggregateByHour(records),
       dayBuckets: aggregateByDay(records),
+      monthBuckets: aggregateByMonth(records),
       modelSummaries: aggregateByModel(records),
       sessionSummaries: aggregateBySession(records, userMessages),
       modelSwitches: detectModelSwitches(records),

@@ -6,6 +6,7 @@ import type {
   MinuteBucket,
   HourBucket,
   DayBucket,
+  MonthBucket,
   ModelSummary,
   SessionSummary,
   ModelSwitch,
@@ -25,6 +26,7 @@ interface DataState {
   minuteBuckets: MinuteBucket[]
   hourBuckets: HourBucket[]
   dayBuckets: DayBucket[]
+  monthBuckets: MonthBucket[]
   modelSummaries: ModelSummary[]
   sessionSummaries: SessionSummary[]
   modelSwitches: ModelSwitch[]
@@ -43,6 +45,7 @@ interface DataState {
     minuteBuckets: MinuteBucket[]
     hourBuckets: HourBucket[]
     dayBuckets: DayBucket[]
+    monthBuckets: MonthBucket[]
     modelSummaries: ModelSummary[]
     sessionSummaries: SessionSummary[]
     modelSwitches: ModelSwitch[]
@@ -60,6 +63,7 @@ export const useDataStore = create<DataState>((set) => ({
   minuteBuckets: [],
   hourBuckets: [],
   dayBuckets: [],
+  monthBuckets: [],
   modelSummaries: [],
   sessionSummaries: [],
   modelSwitches: [],
@@ -78,6 +82,7 @@ export const useDataStore = create<DataState>((set) => ({
       minuteBuckets: data.minuteBuckets,
       hourBuckets: data.hourBuckets,
       dayBuckets: data.dayBuckets,
+      monthBuckets: data.monthBuckets,
       modelSummaries: data.modelSummaries,
       sessionSummaries: data.sessionSummaries,
       modelSwitches: data.modelSwitches,

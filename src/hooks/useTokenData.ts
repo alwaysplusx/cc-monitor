@@ -5,29 +5,24 @@ import { useSettingsStore } from '../stores/settingsStore'
 import { electronApi } from '../lib/ipc'
 
 /**
- * Fetches project list and token data from main process,
+ * Fetches all token data from ~/.claude/projects/ on mount,
  * subscribes to real-time DATA_UPDATED events.
  */
 export function useTokenData(): void {
   const setProjects = useDataStore((s) => s.setProjects)
-  const currentProject = useDataStore((s) => s.currentProject)
-  const setProject = useDataStore((s) => s.setProject)
   const updateData = useDataStore((s) => s.updateData)
   const loadSettings = useSettingsStore((s) => s.loadSettings)
 
-  const fetchTokenData = useCallback(
-    async (projectPath: string) => {
-      try {
-        const data = await electronApi.getTokenData(projectPath)
-        updateData(data)
-      } catch (err) {
-        console.error('Failed to fetch token data:', err)
-      }
-    },
-    [updateData],
-  )
+  const fetchTokenData = useCallback(async () => {
+    try {
+      const data = await electronApi.getTokenData('')
+      updateData(data)
+    } catch (err) {
+      console.error('Failed to fetch token data:', err)
+    }
+  }, [updateData])
 
-  // Load projects and settings on mount
+  // Load settings, projects, and data on mount
   useEffect(() => {
     const init = async () => {
       try {
@@ -37,10 +32,7 @@ export function useTokenData(): void {
         const projects = await electronApi.getProjects()
         setProjects(projects)
 
-        // Auto-select the most recent project
-        if (projects.length > 0 && !currentProject) {
-          setProject(projects[0].path)
-        }
+        await fetchTokenData()
       } catch (err) {
         console.error('Failed to initialize:', err)
       }
@@ -48,22 +40,11 @@ export function useTokenData(): void {
     init()
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Fetch data when current project changes
-  useEffect(() => {
-    if (currentProject) {
-      fetchTokenData(currentProject)
-    }
-  }, [currentProject, fetchTokenData])
-
   // Subscribe to real-time data updates from main process
   useEffect(() => {
-    const unsubscribe = electronApi.onDataUpdated((projectPath) => {
-      if (projectPath === currentProject || !currentProject) {
-        if (currentProject) {
-          fetchTokenData(currentProject)
-        }
-      }
+    const unsubscribe = electronApi.onDataUpdated(() => {
+      fetchTokenData()
     })
     return unsubscribe
-  }, [currentProject, fetchTokenData])
+  }, [fetchTokenData])
 }

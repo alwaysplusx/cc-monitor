@@ -75,7 +75,7 @@ export default function SessionTable() {
 
   return (
     <div>
-      <h3 className="mb-3 text-xs font-semibold text-[var(--foreground)]">Sessions</h3>
+      <h3 className="mb-3 text-xs font-semibold text-[var(--foreground)]">会话列表</h3>
 
       {hasData ? (
         <div className="overflow-x-auto">
@@ -83,14 +83,14 @@ export default function SessionTable() {
             <thead>
               <tr className="border-b border-[var(--border)] text-left text-[var(--muted-foreground)]">
                 <th className="w-8 p-2" />
-                <th className="p-2">Session</th>
-                <th className="w-[100px] p-2">Time</th>
-                <th className="w-[80px] p-2">Model</th>
-                <th className="w-[70px] p-2 text-right">Input</th>
-                <th className="w-[70px] p-2 text-right">Output</th>
-                <th className="w-[70px] p-2 text-right">Cache</th>
-                <th className="w-[50px] p-2 text-right">Reqs</th>
-                <th className="w-[100px] p-2">Ratio</th>
+                <th className="p-2">会话</th>
+                <th className="w-[100px] p-2">时间</th>
+                <th className="w-[80px] p-2">模型</th>
+                <th className="w-[70px] p-2 text-right">输入</th>
+                <th className="w-[70px] p-2 text-right">输出</th>
+                <th className="w-[70px] p-2 text-right">缓存</th>
+                <th className="w-[50px] p-2 text-right">请求</th>
+                <th className="w-[100px] p-2">占比</th>
               </tr>
             </thead>
             <tbody>
@@ -187,7 +187,7 @@ export default function SessionTable() {
         </div>
       ) : (
         <div className="py-8 text-center text-xs text-[var(--muted-foreground)]">
-          No session data
+          暂无会话数据
         </div>
       )}
     </div>

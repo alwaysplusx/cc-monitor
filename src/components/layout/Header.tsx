@@ -1,4 +1,4 @@
-// Top navigation bar: logo, project selector, theme toggle, monitoring status
+// Top navigation bar: logo, theme toggle, monitoring status
 import { useState, useEffect, useCallback } from 'react'
 import { Monitor, Sun, Moon, Settings, RefreshCw } from 'lucide-react'
 import { useDataStore } from '../../stores/dataStore'
@@ -7,9 +7,6 @@ import { electronApi } from '../../lib/ipc'
 import { cn } from '../../lib/utils'
 
 export default function Header() {
-  const projects = useDataStore((s) => s.projects)
-  const currentProject = useDataStore((s) => s.currentProject)
-  const setProject = useDataStore((s) => s.setProject)
   const lastUpdated = useDataStore((s) => s.lastUpdated)
   const { theme, cycleTheme } = useTheme()
   const [isBlinking, setIsBlinking] = useState(false)
@@ -56,21 +53,8 @@ export default function Header() {
         <span className="text-sm font-semibold text-[var(--foreground)]">CC Monitor</span>
       </div>
 
-      {/* Center: Project Selector */}
-      <div className="flex items-center gap-2">
-        <select
-          className="h-8 rounded-md border border-[var(--border)] bg-[var(--background)] px-3 text-xs text-[var(--foreground)] outline-none"
-          value={currentProject ?? ''}
-          onChange={(e) => setProject(e.target.value || null)}
-        >
-          <option value="">All Projects</option>
-          {projects.map((p) => (
-            <option key={p.path} value={p.path}>
-              {p.workingDir || p.path}
-            </option>
-          ))}
-        </select>
-      </div>
+      {/* Center: spacer */}
+      <div />
 
       {/* Right: Status + Theme + Settings */}
       <div className="flex items-center gap-3">
@@ -81,7 +65,7 @@ export default function Header() {
             lastUpdated ? 'bg-green-500' : 'bg-gray-400',
             isBlinking && 'scale-150 opacity-70',
           )} />
-          {lastUpdated ? formatTime(lastUpdated) : 'waiting'}
+          {lastUpdated ? formatTime(lastUpdated) : '等待中'}
         </div>
 
         {/* Refresh button */}
@@ -89,7 +73,7 @@ export default function Header() {
           onClick={handleRefresh}
           disabled={isRefreshing}
           className="rounded-md p-1.5 text-[var(--muted-foreground)] hover:bg-[var(--accent)] hover:text-[var(--foreground)] disabled:opacity-50"
-          title="Refresh"
+          title="刷新"
         >
           <RefreshCw className={cn('h-4 w-4', isRefreshing && 'animate-spin')} />
         </button>
@@ -98,7 +82,7 @@ export default function Header() {
         <button
           onClick={cycleTheme}
           className="rounded-md p-1.5 text-[var(--muted-foreground)] hover:bg-[var(--accent)] hover:text-[var(--foreground)]"
-          title={`Theme: ${theme}`}
+          title={`主题: ${theme}`}
         >
           {themeIcon}
         </button>
@@ -106,7 +90,7 @@ export default function Header() {
         {/* Settings */}
         <button
           className="rounded-md p-1.5 text-[var(--muted-foreground)] hover:bg-[var(--accent)] hover:text-[var(--foreground)]"
-          title="Settings"
+          title="设置"
         >
           <Settings className="h-4 w-4" />
         </button>

@@ -1,5 +1,6 @@
 // File-level data cache to avoid re-parsing unchanged JSONL files
-import { statSync } from 'fs'
+import { statSync, readdirSync } from 'fs'
+import { join } from 'path'
 import type { TokenRecord } from '../../src/types/data'
 import { parseJsonlFile } from './parser'
 
@@ -81,10 +82,42 @@ export class FileCache {
   }
 
   /**
-   * Return records filtered by project path.
+   * Recursively find and load all JSONL files under a project directory into cache.
+   */
+  loadProjectFiles(projectDir: string): void {
+    const findAndLoad = (dir: string): void => {
+      let entries
+      try {
+        entries = readdirSync(dir, { withFileTypes: true })
+      } catch {
+        return
+      }
+      for (const entry of entries) {
+        const fullPath = join(dir, entry.name)
+        if (entry.isDirectory()) {
+          findAndLoad(fullPath)
+        } else if (entry.isFile() && entry.name.endsWith('.jsonl')) {
+          this.getOrParse(fullPath)
+        }
+      }
+    }
+    findAndLoad(projectDir)
+  }
+
+  /**
+   * Return records filtered by project path (matched against cached file paths).
+   * projectPath is the ~/.claude/projects/<encoded-dir> path.
    */
   getRecordsByProject(projectPath: string): TokenRecord[] {
-    return this.getAllRecords().filter((r) => r.projectPath === projectPath)
+    const normalized = projectPath.replace(/\\/g, '/')
+    const records: TokenRecord[] = []
+    for (const [filePath, entry] of this.cache.entries()) {
+      const normalizedFile = filePath.replace(/\\/g, '/')
+      if (normalizedFile.startsWith(normalized + '/') || normalizedFile.startsWith(normalized + '\\')) {
+        records.push(...entry.records)
+      }
+    }
+    return records
   }
 
   /**

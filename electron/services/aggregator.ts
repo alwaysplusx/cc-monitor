@@ -4,6 +4,7 @@ import type {
   MinuteBucket,
   HourBucket,
   DayBucket,
+  MonthBucket,
   ModelSummary,
   SessionSummary,
   ModelSwitch,
@@ -22,20 +23,28 @@ function filterByTimeRange(
   })
 }
 
+function pad(n: number): string {
+  return n < 10 ? `0${n}` : `${n}`
+}
+
 function formatMinute(d: Date): string {
-  return d.toISOString().slice(0, 16) // 'YYYY-MM-DDTHH:mm'
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
 }
 
 function formatHour(d: Date): string {
-  return d.toISOString().slice(0, 13) // 'YYYY-MM-DDTHH'
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}`
 }
 
 function formatDay(d: Date): string {
-  return d.toISOString().slice(0, 10) // 'YYYY-MM-DD'
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
+}
+
+function formatMonth(d: Date): string {
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}`
 }
 
 /**
- * Aggregate records by minute. Fills gaps between first and last timestamp.
+ * Aggregate records by minute.
  */
 export function aggregateByMinute(
   records: TokenRecord[],
@@ -63,7 +72,6 @@ export function aggregateByMinute(
     bucketMap.set(key, bucket)
   }
 
-  // Sort by minute key
   return Array.from(bucketMap.values()).sort((a, b) => a.minute.localeCompare(b.minute))
 }
 
@@ -100,7 +108,7 @@ export function aggregateByHour(
 }
 
 /**
- * Aggregate records by day.
+ * Aggregate records by day. Fills gaps so every day from first to last is present.
  */
 export function aggregateByDay(
   records: TokenRecord[],
@@ -128,7 +136,50 @@ export function aggregateByDay(
     bucketMap.set(key, bucket)
   }
 
+  // Fill gaps: every day from first to last
+  if (bucketMap.size > 0) {
+    const keys = Array.from(bucketMap.keys()).sort()
+    const cursor = new Date(keys[0] + 'T00:00:00')
+    const endDate = new Date(keys[keys.length - 1] + 'T00:00:00')
+    while (cursor <= endDate) {
+      const key = formatDay(cursor)
+      if (!bucketMap.has(key)) {
+        bucketMap.set(key, { day: key, input: 0, output: 0, cacheRead: 0, cacheCreate: 0, requestCount: 0 })
+      }
+      cursor.setDate(cursor.getDate() + 1)
+    }
+  }
+
   return Array.from(bucketMap.values()).sort((a, b) => a.day.localeCompare(b.day))
+}
+
+/**
+ * Aggregate records by month.
+ */
+export function aggregateByMonth(
+  records: TokenRecord[],
+): MonthBucket[] {
+  const bucketMap = new Map<string, MonthBucket>()
+
+  for (const r of records) {
+    const key = formatMonth(r.timestamp)
+    const bucket = bucketMap.get(key) ?? {
+      month: key,
+      input: 0,
+      output: 0,
+      cacheRead: 0,
+      cacheCreate: 0,
+      requestCount: 0,
+    }
+    bucket.input += r.inputTokens
+    bucket.output += r.outputTokens
+    bucket.cacheRead += r.cacheReadTokens
+    bucket.cacheCreate += r.cacheCreateTokens
+    bucket.requestCount += 1
+    bucketMap.set(key, bucket)
+  }
+
+  return Array.from(bucketMap.values()).sort((a, b) => a.month.localeCompare(b.month))
 }
 
 /**

@@ -36,35 +36,44 @@ export default function StatsBar() {
   return (
     <div className="flex gap-3 p-4">
       <StatCard
-        label="Input Tokens"
+        label="输入 Token"
         value={fmtK(totalInput)}
         subtext={fmtN(totalInput)}
         color="text-blue-500"
       />
       <StatCard
-        label="Output Tokens"
+        label="输出 Token"
         value={fmtK(totalOutput)}
         subtext={fmtN(totalOutput)}
         color="text-purple-500"
       />
       <StatCard
-        label="Cache Read"
+        label="缓存读取"
         value={fmtK(totalCacheRead)}
         subtext={fmtN(totalCacheRead)}
         color="text-cyan-500"
       />
       <StatCard
-        label="Requests"
+        label="请求次数"
         value={fmtK(requestCount)}
-        subtext={`${requestCount} total`}
+        subtext={`共 ${requestCount} 次`}
         color="text-green-500"
       />
       <StatCard
-        label="Active Duration"
+        label="活跃时长"
         value={fmtDuration(activeDurationMs)}
         subtext={timestamps.length > 0
-          ? `${new Date(Math.min(...timestamps)).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })} - ${new Date(Math.max(...timestamps)).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })}`
-          : 'No data'}
+          ? (() => {
+              const minDate = new Date(Math.min(...timestamps))
+              const maxDate = new Date(Math.max(...timestamps))
+              const fmt = (d: Date) => d.toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit' })
+              const fmtTime = (d: Date) => d.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
+              if (fmt(minDate) === fmt(maxDate)) {
+                return `${fmtTime(minDate)} - ${fmtTime(maxDate)}`
+              }
+              return `${fmt(minDate)} - ${fmt(maxDate)}`
+            })()
+          : '暂无数据'}
         color="text-amber-500"
       />
     </div>
