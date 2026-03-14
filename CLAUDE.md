@@ -28,6 +28,23 @@ Claude Code Token 消耗监控 Electron 桌面应用。
 - 文件命名：组件 PascalCase.tsx，其他 camelCase.ts
 - IPC 通信走 preload contextBridge，渲染进程禁止直接访问 Node API
 
+## 页面结构
+
+- **Header** — 顶部导航栏
+- **StatsBar** — 6 个统计卡片（输入/输出/缓存/请求/近 5 小时/活跃时长），带 info tooltip
+- **MinuteTimeline** — 时间线柱状图（小时/天/月 tab），tooltip 含模型分布，dataZoom 滑块 25%
+- **ModelPie** — 模型分布饼图 + 列表（最多显示 4 条，超出滚动）
+- **ProjectPie** — 项目分布饼图 + 列表（<5% 合并为「其他」，最多 4 条，超出滚动）
+- **SessionTable** — 会话列表（ID/项目/会话/请求/Token/模型/时间），支持展开 subagent、点击打开目录
+
+## IPC 通道
+
+- `get-projects` / `get-token-data` / `refresh` — 数据获取
+- `select-directory` — 选择目录对话框
+- `open-directory` — 打开文件所在目录（shell.showItemInFolder）
+- `get-settings` / `save-settings` — 设置读写
+- `data-updated` / `watch-status` — 主进程推送事件
+
 ## 关键文件
 
 - `docs/design.md` — 完整设计文档（架构、数据模型、UI 设计、功能规格）
