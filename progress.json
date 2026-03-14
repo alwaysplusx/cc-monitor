@@ -1,5 +1,5 @@
 {
-  "lastCompleted": "T6-1",
+  "lastCompleted": "T6-3",
   "completedTasks": [
     { "id": "T1-1", "status": "completed", "name": "创建 electron-vite 项目" },
     { "id": "T1-2", "status": "completed", "name": "安装核心依赖" },
@@ -31,8 +31,8 @@
     { "id": "T5-3", "status": "completed", "name": "渲染进程接入实时数据" },
     { "id": "T6-1", "status": "completed", "name": "空状态和错误处理" },
     { "id": "T6-2", "status": "completed", "name": "Windows 打包测试" },
-    { "id": "T6-3", "status": "pending", "name": "编写 README" }
+    { "id": "T6-3", "status": "completed", "name": "编写 README" }
   ],
-  "nextTask": "T6-3",
-  "phaseCompleted": "Phase 5 (Phase 6 in progress)"
+  "nextTask": null,
+  "phaseCompleted": "Phase 6 (ALL COMPLETE)"
 }
