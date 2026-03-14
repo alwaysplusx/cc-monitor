@@ -5,7 +5,8 @@
   "main": "./out/main/index.js",
   "scripts": {
     "dev": "electron-vite dev",
-    "build": "electron-vite build",
+    "build": "electron-vite build && electron-builder",
+    "build:vite": "electron-vite build",
     "preview": "electron-vite preview",
     "lint": "eslint .",
     "format": "prettier --write .",
