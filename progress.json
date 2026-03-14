@@ -1,5 +1,5 @@
 {
-  "lastCompleted": "T3-6",
+  "lastCompleted": "T6-1",
   "completedTasks": [
     { "id": "T1-1", "status": "completed", "name": "创建 electron-vite 项目" },
     { "id": "T1-2", "status": "completed", "name": "安装核心依赖" },
@@ -21,8 +21,18 @@
     { "id": "T3-3", "status": "completed", "name": "实现主题系统" },
     { "id": "T3-4", "status": "completed", "name": "实现 Header 组件" },
     { "id": "T3-5", "status": "completed", "name": "实现 StatsBar 组件" },
-    { "id": "T3-6", "status": "completed", "name": "实现 App 整体布局" }
+    { "id": "T3-6", "status": "completed", "name": "实现 App 整体布局" },
+    { "id": "T4-1", "status": "completed", "name": "实现分钟级时间线" },
+    { "id": "T4-2", "status": "completed", "name": "实现模型用量分布" },
+    { "id": "T4-3", "status": "completed", "name": "实现 5 小时窗口预测" },
+    { "id": "T4-4", "status": "completed", "name": "实现 Session 表格" },
+    { "id": "T5-1", "status": "completed", "name": "实现文件监控服务" },
+    { "id": "T5-2", "status": "completed", "name": "在主进程中集成文件监控" },
+    { "id": "T5-3", "status": "completed", "name": "渲染进程接入实时数据" },
+    { "id": "T6-1", "status": "completed", "name": "空状态和错误处理" },
+    { "id": "T6-2", "status": "completed", "name": "Windows 打包测试" },
+    { "id": "T6-3", "status": "pending", "name": "编写 README" }
   ],
-  "nextTask": "T4-1",
-  "phaseCompleted": "Phase 3"
+  "nextTask": "T6-3",
+  "phaseCompleted": "Phase 5 (Phase 6 in progress)"
 }
