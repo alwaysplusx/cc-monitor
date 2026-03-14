@@ -1,7 +1,9 @@
 // Top navigation bar: logo, project selector, theme toggle, monitoring status
+import { useState, useEffect, useCallback } from 'react'
 import { Monitor, Sun, Moon, Settings, RefreshCw } from 'lucide-react'
 import { useDataStore } from '../../stores/dataStore'
 import { useTheme } from '../../hooks/useTheme'
+import { electronApi } from '../../lib/ipc'
 import { cn } from '../../lib/utils'
 
 export default function Header() {
@@ -10,6 +12,29 @@ export default function Header() {
   const setProject = useDataStore((s) => s.setProject)
   const lastUpdated = useDataStore((s) => s.lastUpdated)
   const { theme, cycleTheme } = useTheme()
+  const [isBlinking, setIsBlinking] = useState(false)
+  const [isRefreshing, setIsRefreshing] = useState(false)
+
+  // Blink the status dot when data updates
+  useEffect(() => {
+    if (lastUpdated) {
+      setIsBlinking(true)
+      const timer = setTimeout(() => setIsBlinking(false), 1000)
+      return () => clearTimeout(timer)
+    }
+    return undefined
+  }, [lastUpdated])
+
+  const handleRefresh = useCallback(async () => {
+    setIsRefreshing(true)
+    try {
+      await electronApi.refreshData()
+    } catch (err) {
+      console.error('Refresh failed:', err)
+    } finally {
+      setIsRefreshing(false)
+    }
+  }, [])
 
   const themeIcon =
     theme === 'dark' ? <Moon className="h-4 w-4" /> :
@@ -52,18 +77,21 @@ export default function Header() {
         {/* Monitoring status indicator */}
         <div className="flex items-center gap-1.5 text-xs text-[var(--muted-foreground)]">
           <span className={cn(
-            'h-2 w-2 rounded-full',
+            'h-2 w-2 rounded-full transition-all',
             lastUpdated ? 'bg-green-500' : 'bg-gray-400',
+            isBlinking && 'scale-150 opacity-70',
           )} />
           {lastUpdated ? formatTime(lastUpdated) : 'waiting'}
         </div>
 
         {/* Refresh button */}
         <button
-          className="rounded-md p-1.5 text-[var(--muted-foreground)] hover:bg-[var(--accent)] hover:text-[var(--foreground)]"
+          onClick={handleRefresh}
+          disabled={isRefreshing}
+          className="rounded-md p-1.5 text-[var(--muted-foreground)] hover:bg-[var(--accent)] hover:text-[var(--foreground)] disabled:opacity-50"
           title="Refresh"
         >
-          <RefreshCw className="h-4 w-4" />
+          <RefreshCw className={cn('h-4 w-4', isRefreshing && 'animate-spin')} />
         </button>
 
         {/* Theme toggle */}
