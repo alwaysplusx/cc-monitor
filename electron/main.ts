@@ -2,9 +2,14 @@
 import { app, BrowserWindow, shell } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
-import { registerIpcHandlers } from './ipc/handlers'
+import { registerIpcHandlers, getFileCache } from './ipc/handlers'
+import { FileWatcher } from './services/watcher'
+import { readSettings } from './services/settings'
+import { IPC } from './ipc/channels'
 
-function createWindow(): void {
+let fileWatcher: FileWatcher | null = null
+
+function createWindow(): BrowserWindow {
   const mainWindow = new BrowserWindow({
     width: 1200,
     height: 800,
@@ -32,6 +37,26 @@ function createWindow(): void {
   } else {
     mainWindow.loadFile(join(__dirname, '../renderer/index.html'))
   }
+
+  return mainWindow
+}
+
+function startFileWatcher(mainWindow: BrowserWindow): void {
+  const settings = readSettings()
+  if (!settings.watchEnabled) return
+
+  const cache = getFileCache()
+  fileWatcher = new FileWatcher(settings.claudeDataDir, cache, (changedFiles) => {
+    // Notify renderer that data has been updated
+    if (!mainWindow.isDestroyed()) {
+      // Send the project path from the first changed file
+      const projectPath = changedFiles[0] || ''
+      mainWindow.webContents.send(IPC.DATA_UPDATED, projectPath)
+      mainWindow.webContents.send(IPC.WATCH_STATUS, fileWatcher?.getStatus() ?? 'stopped')
+    }
+  })
+
+  fileWatcher.start()
 }
 
 app.whenReady().then(() => {
@@ -42,15 +67,32 @@ app.whenReady().then(() => {
   })
 
   registerIpcHandlers()
-  createWindow()
+  const mainWindow = createWindow()
+
+  // Start file watcher after window is ready
+  mainWindow.webContents.on('did-finish-load', () => {
+    startFileWatcher(mainWindow)
+  })
 
   app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) createWindow()
+    if (BrowserWindow.getAllWindows().length === 0) {
+      const win = createWindow()
+      win.webContents.on('did-finish-load', () => {
+        startFileWatcher(win)
+      })
+    }
   })
 })
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
     app.quit()
+  }
+})
+
+app.on('before-quit', async () => {
+  if (fileWatcher) {
+    await fileWatcher.stop()
+    fileWatcher = null
   }
 })
