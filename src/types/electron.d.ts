@@ -1,10 +1,27 @@
 // Type declarations for the preload API exposed via contextBridge
-import type { ProjectInfo, TokenRecord } from './data'
+import type {
+  ProjectInfo,
+  TokenRecord,
+  MinuteBucket,
+  HourBucket,
+  DayBucket,
+  ModelSummary,
+  SessionSummary,
+  ModelSwitch,
+} from './data'
 import type { AppSettings, WatchStatus } from './ipc'
 
 export interface ElectronAPI {
   getProjects(): Promise<ProjectInfo[]>
-  getTokenData(projectPath: string): Promise<TokenRecord[]>
+  getTokenData(projectPath: string): Promise<{
+    records: TokenRecord[]
+    minuteBuckets: MinuteBucket[]
+    hourBuckets: HourBucket[]
+    dayBuckets: DayBucket[]
+    modelSummaries: ModelSummary[]
+    sessionSummaries: SessionSummary[]
+    modelSwitches: ModelSwitch[]
+  }>
   refreshData(): Promise<void>
   selectDirectory(): Promise<string | null>
   exportData(format: 'csv' | 'json', data: object): Promise<string>
