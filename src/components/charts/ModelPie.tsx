@@ -28,6 +28,7 @@ export default function ModelPie() {
 
     return {
       ...themeObj,
+      legend: { show: false },
       tooltip: {
         trigger: 'item',
         ...themeObj.tooltip,

@@ -8,12 +8,27 @@ interface StatCardProps {
   value: string
   subtext: string
   color: string
+  tooltip?: string
 }
 
-function StatCard({ label, value, subtext, color }: StatCardProps) {
+function StatCard({ label, value, subtext, color, tooltip }: StatCardProps) {
   return (
-    <div className="group flex flex-1 flex-col gap-1 rounded-lg border border-[var(--border)] bg-[var(--card)] p-3 transition-colors hover:border-[var(--primary)]">
-      <span className="text-xs text-[var(--muted-foreground)]">{label}</span>
+    <div className="relative flex flex-1 flex-col gap-1 rounded-lg border border-[var(--border)] bg-[var(--card)] p-3 transition-colors hover:border-[var(--primary)]">
+      <div className="flex items-center gap-1">
+        <span className="text-xs text-[var(--muted-foreground)]">{label}</span>
+        {tooltip && (
+          <span className="group/tip relative cursor-help text-[var(--muted-foreground)] opacity-50 transition-opacity hover:opacity-100">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="10" />
+              <path d="M12 16v-4" />
+              <path d="M12 8h.01" />
+            </svg>
+            <span className="pointer-events-none absolute left-1/2 top-5 z-50 hidden -translate-x-1/2 whitespace-nowrap rounded-md border border-[var(--border)] bg-[var(--popover)] px-2.5 py-1.5 text-xs text-[var(--popover-foreground)] shadow-md group-hover/tip:block">
+              {tooltip}
+            </span>
+          </span>
+        )}
+      </div>
       <span className={cn('font-mono text-xl font-bold', color)}>{value}</span>
       <span className="text-xs text-[var(--muted-foreground)]">{subtext}</span>
     </div>
@@ -40,24 +55,28 @@ export default function StatsBar() {
         value={fmtK(totalInput)}
         subtext={fmtN(totalInput)}
         color="text-blue-500"
+        tooltip="发送给模型的 Token 总量（所有项目累计）"
       />
       <StatCard
         label="输出 Token"
         value={fmtK(totalOutput)}
         subtext={fmtN(totalOutput)}
         color="text-purple-500"
+        tooltip="模型生成的 Token 总量（所有项目累计）"
       />
       <StatCard
         label="缓存读取"
         value={fmtK(totalCacheRead)}
         subtext={fmtN(totalCacheRead)}
         color="text-cyan-500"
+        tooltip="从缓存中读取的 Token 总量，不计入实际消耗"
       />
       <StatCard
         label="请求次数"
         value={fmtK(requestCount)}
         subtext={`共 ${requestCount} 次`}
         color="text-green-500"
+        tooltip="所有项目的 API 请求次数累计"
       />
       <StatCard
         label="活跃时长"
@@ -75,6 +94,7 @@ export default function StatsBar() {
             })()
           : '暂无数据'}
         color="text-amber-500"
+        tooltip="最早记录到最新记录的时间跨度（非实际使用时长）"
       />
     </div>
   )
