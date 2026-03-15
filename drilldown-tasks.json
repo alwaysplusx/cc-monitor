@@ -1,0 +1,353 @@
+{
+  "project": "cc-monitor",
+  "feature": "data-drilldown",
+  "description": "数据下钻功能 — 为各模块添加点击下钻详情面板",
+  "design_doc": "docs/drilldown-plan.md",
+  "phases": [
+    {
+      "id": "phase-1",
+      "name": "基础设施",
+      "description": "搭建下钻面板通用组件和状态管理",
+      "tasks": [
+        {
+          "id": "D1-1",
+          "name": "DrilldownDrawer 通用组件",
+          "description": "创建右侧滑出面板容器组件，支持标题、关闭、遮罩层、动画",
+          "steps": [
+            "创建 src/components/drilldown/DrilldownDrawer.tsx",
+            "Props: open, onClose, title, width(默认480px), children",
+            "实现：固定定位，右侧滑入动画（translate-x），半透明遮罩层",
+            "遮罩层点击关闭，ESC 键关闭",
+            "面板内部可滚动（overflow-y-auto）",
+            "Tailwind class 实现动画，不引入额外依赖"
+          ],
+          "acceptance": "Drawer 可打开/关闭，动画流畅，遮罩层和 ESC 均可关闭",
+          "depends_on": [],
+          "status": "pending"
+        },
+        {
+          "id": "D1-2",
+          "name": "下钻状态管理",
+          "description": "在 dataStore 中添加 drilldown 状态，管理当前打开的面板类型和参数",
+          "steps": [
+            "在 dataStore 中新增 drilldown 状态字段",
+            "定义 DrilldownState 类型：type(cost/session/model/project/usage-pattern/null) + params",
+            "添加 openDrilldown(type, params?) 和 closeDrilldown() actions",
+            "params 支持 sessionId、model、projectPath 等下钻参数"
+          ],
+          "acceptance": "调用 openDrilldown/closeDrilldown 可正确切换状态",
+          "depends_on": [],
+          "status": "pending"
+        },
+        {
+          "id": "D1-3",
+          "name": "App 集成 Drawer",
+          "description": "在 App.tsx 中挂载 DrilldownDrawer，根据 store 状态渲染对应下钻内容",
+          "steps": [
+            "在 App.tsx 中引入 DrilldownDrawer",
+            "读取 dataStore 的 drilldown 状态",
+            "根据 drilldown.type 动态渲染对应的下钻面板组件",
+            "传递 closeDrilldown 给 onClose"
+          ],
+          "acceptance": "任意模块调用 openDrilldown 后 Drawer 正确滑出，显示对应内容",
+          "depends_on": ["D1-1", "D1-2"],
+          "status": "pending"
+        }
+      ]
+    },
+    {
+      "id": "phase-2",
+      "name": "预估花费下钻",
+      "description": "点击预估花费卡片，展示费用多维分析面板",
+      "tasks": [
+        {
+          "id": "D2-1",
+          "name": "花费卡片点击触发",
+          "description": "StatsBar 预估花费卡片添加点击事件，打开花费下钻面板",
+          "steps": [
+            "StatCard 组件添加 onClick 可选 prop",
+            "预估花费卡片传入 onClick 调用 openDrilldown('cost')",
+            "卡片添加 cursor-pointer 样式提示可点击"
+          ],
+          "acceptance": "点击预估花费卡片，Drawer 滑出显示花费下钻面板",
+          "depends_on": ["D1-3"],
+          "status": "pending"
+        },
+        {
+          "id": "D2-2",
+          "name": "费用总览头部",
+          "description": "面板顶部显示总花费、日均花费、输入/输出/缓存分项",
+          "steps": [
+            "创建 src/components/drilldown/CostDrilldown.tsx",
+            "计算总花费、日均花费（总花费 / 活跃天数）",
+            "分项显示输入/输出/缓存费用 + 占比进度条",
+            "使用与 StatsBar 一致的配色"
+          ],
+          "acceptance": "面板头部正确显示总花费和分项明细",
+          "depends_on": ["D2-1"],
+          "status": "pending"
+        },
+        {
+          "id": "D2-3",
+          "name": "每日费用趋势图",
+          "description": "折线图展示近 14 天每日花费趋势，支持切换时间范围",
+          "steps": [
+            "从 TokenRecord 按天聚合计算每日费用（按 model pricing）",
+            "ECharts 折线图：三条线（输入/输出/缓存费用）",
+            "添加 7d / 14d / 30d 切换 tab",
+            "tooltip 显示当日各项费用明细"
+          ],
+          "acceptance": "折线图正确展示每日费用趋势，时间范围可切换",
+          "depends_on": ["D2-2"],
+          "status": "pending"
+        },
+        {
+          "id": "D2-4",
+          "name": "按项目费用排行",
+          "description": "横向柱状图展示各项目费用排行",
+          "steps": [
+            "从 TokenRecord 按 projectPath 聚合计算各项目费用",
+            "ECharts 横向堆叠柱状图（输入/输出/缓存分色）",
+            "按费用降序排列，最多 10 个，其余合并为「其他」",
+            "tooltip 显示项目费用明细"
+          ],
+          "acceptance": "柱状图正确展示项目费用排行，可悬浮查看明细",
+          "depends_on": ["D2-2"],
+          "status": "pending"
+        },
+        {
+          "id": "D2-5",
+          "name": "按模型费用排行",
+          "description": "横向柱状图展示各模型费用排行",
+          "steps": [
+            "从 TokenRecord 按 model 聚合计算各模型费用",
+            "ECharts 横向堆叠柱状图（输入/输出/缓存分色）",
+            "按费用降序排列",
+            "tooltip 显示模型费用明细和单价信息"
+          ],
+          "acceptance": "柱状图正确展示模型费用排行",
+          "depends_on": ["D2-2"],
+          "status": "pending"
+        },
+        {
+          "id": "D2-6",
+          "name": "最贵会话 Top 10",
+          "description": "表格展示费用最高的 10 个会话",
+          "steps": [
+            "从 TokenRecord 按 sessionId 聚合计算各会话总费用",
+            "关联 SessionSummary 获取会话摘要、项目、模型信息",
+            "表格列：会话摘要 | 项目 | 主模型 | 费用 | 时间",
+            "按费用降序取 Top 10",
+            "行可点击，触发 openDrilldown('session', { sessionId }) 跳转会话下钻"
+          ],
+          "acceptance": "表格正确展示最贵会话，点击行可跳转到会话下钻",
+          "depends_on": ["D2-2"],
+          "status": "pending"
+        }
+      ]
+    },
+    {
+      "id": "phase-3",
+      "name": "会话详情下钻",
+      "description": "点击会话列表中的会话行，展示单会话详细分析",
+      "tasks": [
+        {
+          "id": "D3-1",
+          "name": "会话行点击触发",
+          "description": "SessionTable 行点击打开会话下钻面板",
+          "steps": [
+            "SessionTable 行添加点击事件，调用 openDrilldown('session', { sessionId })",
+            "行添加 cursor-pointer 样式",
+            "区分展开 subagent 的点击（ChevronRight）和行点击（下钻），避免冲突"
+          ],
+          "acceptance": "点击会话行打开 Drawer，点击展开按钮仍展开 subagent 列表",
+          "depends_on": ["D1-3"],
+          "status": "pending"
+        },
+        {
+          "id": "D3-2",
+          "name": "会话信息头部",
+          "description": "面板顶部显示会话基本信息",
+          "steps": [
+            "创建 src/components/drilldown/SessionDrilldown.tsx",
+            "从 SessionSummary 获取：完整 sessionId、项目名、首条消息",
+            "显示开始时间、持续时长、请求次数、Token 总量",
+            "显示预估费用（从 TokenRecord 按 sessionId 计算）"
+          ],
+          "acceptance": "面板头部正确显示会话基本信息和费用",
+          "depends_on": ["D3-1"],
+          "status": "pending"
+        },
+        {
+          "id": "D3-3",
+          "name": "请求时间线",
+          "description": "散点/柱状图展示会话内每次请求的 Token 消耗",
+          "steps": [
+            "从 TokenRecord 按 sessionId 过滤，按时间排序",
+            "ECharts 柱状图：每个柱子 = 一次请求",
+            "堆叠输入（蓝）/输出（紫）/缓存（青）",
+            "tooltip 显示该请求的时间、模型、Token 明细",
+            "如有模型切换，用 markLine 标注切换点"
+          ],
+          "acceptance": "时间线正确展示会话内各请求的 Token 分布",
+          "depends_on": ["D3-2"],
+          "status": "pending"
+        },
+        {
+          "id": "D3-4",
+          "name": "模型使用明细",
+          "description": "展示该会话使用的模型及各自占比",
+          "steps": [
+            "从 SessionSummary.modelBreakdown 获取模型分布",
+            "迷你饼图 + 列表展示各模型的请求次数和 Token 占比",
+            "如有多个模型，展示模型切换时间线"
+          ],
+          "acceptance": "正确展示会话内的模型使用情况",
+          "depends_on": ["D3-2"],
+          "status": "pending"
+        },
+        {
+          "id": "D3-5",
+          "name": "Subagent 关系展示",
+          "description": "展示主会话与 subagent 的调用关系和资源消耗",
+          "steps": [
+            "从 SessionSummary 中查找关联的 subagent（按 sessionId 匹配）",
+            "列表展示每个 subagent：agentId、请求数、Token 消耗",
+            "显示 subagent 占主会话总消耗的百分比",
+            "无 subagent 时隐藏此区域"
+          ],
+          "acceptance": "有 subagent 的会话正确展示关系和占比，无 subagent 时不显示",
+          "depends_on": ["D3-2"],
+          "status": "pending"
+        }
+      ]
+    },
+    {
+      "id": "phase-4",
+      "name": "模型 & 项目下钻",
+      "description": "点击饼图扇区或列表项，展示模型/项目维度的详细分析",
+      "tasks": [
+        {
+          "id": "D4-1",
+          "name": "模型饼图点击触发",
+          "description": "ModelPie 饼图扇区和列表行点击打开模型下钻面板",
+          "steps": [
+            "ECharts 饼图添加 click 事件，获取点击的 model 名称",
+            "模型列表行添加点击事件",
+            "调用 openDrilldown('model', { model })"
+          ],
+          "acceptance": "点击饼图扇区或列表行，Drawer 打开模型下钻面板",
+          "depends_on": ["D1-3"],
+          "status": "pending"
+        },
+        {
+          "id": "D4-2",
+          "name": "模型详情面板",
+          "description": "展示单个模型的使用趋势、项目分布和效率指标",
+          "steps": [
+            "创建 src/components/drilldown/ModelDrilldown.tsx",
+            "头部：模型名、总 Token、请求数、占比",
+            "使用趋势：近 14 天每日 Token 折线图（从 TokenRecord 按 model+日期 聚合）",
+            "项目分布：该模型在各项目中的使用量横向柱状图",
+            "效率指标：平均单次输入/输出 Token、输出/输入比",
+            "关联会话列表：使用该模型的会话 Top 10"
+          ],
+          "acceptance": "面板正确展示模型的趋势、分布和效率数据",
+          "depends_on": ["D4-1"],
+          "status": "pending"
+        },
+        {
+          "id": "D4-3",
+          "name": "项目饼图点击触发",
+          "description": "ProjectPie 饼图扇区和列表行点击打开项目下钻面板",
+          "steps": [
+            "ECharts 饼图添加 click 事件，获取点击的项目名称",
+            "项目列表行添加点击事件",
+            "调用 openDrilldown('project', { projectPath })",
+            "「其他」合并项不触发下钻"
+          ],
+          "acceptance": "点击饼图扇区或列表行，Drawer 打开项目下钻面板",
+          "depends_on": ["D1-3"],
+          "status": "pending"
+        },
+        {
+          "id": "D4-4",
+          "name": "项目详情面板",
+          "description": "展示单个项目的消耗趋势、模型分布和费用明细",
+          "steps": [
+            "创建 src/components/drilldown/ProjectDrilldown.tsx",
+            "头部：项目名（完整路径）、总 Token、会话数、活跃范围",
+            "消耗趋势：近 14 天每日 Token 堆叠面积图（输入/输出/缓存）",
+            "模型分布：该项目使用的模型饼图 + 列表",
+            "费用明细：该项目的预估花费，按模型拆分",
+            "关联会话列表：该项目下的会话 Top 10"
+          ],
+          "acceptance": "面板正确展示项目的趋势、模型分布和费用数据",
+          "depends_on": ["D4-3"],
+          "status": "pending"
+        }
+      ]
+    },
+    {
+      "id": "phase-5",
+      "name": "使用模式下钻",
+      "description": "点击请求次数卡片，展示使用模式和时间分布分析",
+      "tasks": [
+        {
+          "id": "D5-1",
+          "name": "请求次数卡片点击触发",
+          "description": "StatsBar 请求次数卡片添加点击事件，打开使用模式下钻面板",
+          "steps": [
+            "请求次数卡片传入 onClick 调用 openDrilldown('usage-pattern')",
+            "卡片添加 cursor-pointer 样式"
+          ],
+          "acceptance": "点击请求次数卡片，Drawer 滑出显示使用模式面板",
+          "depends_on": ["D1-3"],
+          "status": "pending"
+        },
+        {
+          "id": "D5-2",
+          "name": "小时 x 星期热力图",
+          "description": "热力图展示使用高峰时段分布",
+          "steps": [
+            "创建 src/components/drilldown/UsagePatternDrilldown.tsx",
+            "从 TokenRecord 按 hour(0-23) + dayOfWeek(0-6) 聚合请求数",
+            "ECharts heatmap：横轴小时、纵轴星期（Mon-Sun）",
+            "颜色深浅映射请求数，tooltip 显示具体数值"
+          ],
+          "acceptance": "热力图正确展示 24h x 7d 的请求分布",
+          "depends_on": ["D5-1"],
+          "status": "pending"
+        },
+        {
+          "id": "D5-3",
+          "name": "每小时请求密度图",
+          "description": "柱状图展示全时段请求分布",
+          "steps": [
+            "从 TokenRecord 按 hour(0-23) 聚合请求数",
+            "ECharts 柱状图：24 根柱子",
+            "柱内按模型分色堆叠",
+            "tooltip 显示各模型在该小时的请求数"
+          ],
+          "acceptance": "柱状图正确展示 24 小时请求密度分布",
+          "depends_on": ["D5-1"],
+          "status": "pending"
+        },
+        {
+          "id": "D5-4",
+          "name": "每日活跃时段图",
+          "description": "甘特图风格展示近 7 天每天的活跃起止时段",
+          "steps": [
+            "从 TokenRecord 按日期分组，计算每天的首条和末条记录时间",
+            "ECharts custom series 或横向柱状图模拟甘特图",
+            "纵轴：日期（近 7 天），横轴：24 小时",
+            "条形长度 = 活跃时段，tooltip 显示起止时间和持续时长"
+          ],
+          "acceptance": "甘特图正确展示近 7 天的活跃时段分布",
+          "depends_on": ["D5-1"],
+          "status": "pending"
+        }
+      ]
+    }
+  ]
+}
