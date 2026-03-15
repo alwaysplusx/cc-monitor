@@ -8,6 +8,7 @@ import ProjectPie from './components/charts/ProjectPie'
 import SessionTable from './components/tables/SessionTable'
 import SettingsModal from './components/layout/SettingsModal'
 import DrilldownDrawer from './components/drilldown/DrilldownDrawer'
+import CostDrilldown from './components/drilldown/CostDrilldown'
 import { useDataStore } from './stores/dataStore'
 import { useTokenData } from './hooks/useTokenData'
 import { useTheme } from './hooks/useTheme'
@@ -66,7 +67,7 @@ function App(): React.JSX.Element {
         onClose={closeDrilldown}
         title={drilldown ? drilldownTitles[drilldown.type] : ''}
       >
-        {drilldown?.type === 'cost' && <div>费用分析面板（待实现）</div>}
+        {drilldown?.type === 'cost' && <CostDrilldown />}
         {drilldown?.type === 'session' && <div>会话详情面板（待实现）</div>}
         {drilldown?.type === 'model' && <div>模型详情面板（待实现）</div>}
         {drilldown?.type === 'project' && <div>项目详情面板（待实现）</div>}

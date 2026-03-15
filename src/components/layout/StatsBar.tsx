@@ -50,11 +50,18 @@ interface StatCardProps {
   sparkData?: number[]
   tooltip?: string
   tooltipAlign?: 'left' | 'right'
+  onClick?: () => void
 }
 
-function StatCard({ label, value, subtext, subtextNode, rightNode, rightHoverTooltip, color, sparkColor, sparkData, tooltip, tooltipAlign = 'right' }: StatCardProps) {
+function StatCard({ label, value, subtext, subtextNode, rightNode, rightHoverTooltip, color, sparkColor, sparkData, tooltip, tooltipAlign = 'right', onClick }: StatCardProps) {
   return (
-    <div className="group/card relative flex flex-1 flex-col gap-1 rounded-lg border border-[var(--border)] bg-[var(--card)] p-3 transition-colors hover:border-[var(--primary)]">
+    <div
+      className={cn(
+        'group/card relative flex flex-1 flex-col gap-1 rounded-lg border border-[var(--border)] bg-[var(--card)] p-3 transition-colors hover:border-[var(--primary)]',
+        onClick && 'cursor-pointer',
+      )}
+      onClick={onClick}
+    >
       {sparkData && sparkColor && <Sparkline data={sparkData} color={sparkColor} />}
       {rightNode && (
         <div className="group/ring absolute -right-px -top-px z-10">
@@ -162,6 +169,7 @@ function CostDonut({ segments }: { segments: { value: number; color: string; lab
 export default function StatsBar() {
   const records = useDataStore((s) => s.tokenRecords)
   const dayBuckets = useDataStore((s) => s.dayBuckets)
+  const openDrilldown = useDataStore((s) => s.openDrilldown)
   const modelPricing = useSettingsStore((s) => s.modelPricing)
 
   const totalInput = records.reduce((s, r) => s + r.inputTokens, 0)
@@ -313,6 +321,7 @@ export default function StatsBar() {
         }
         color="text-emerald-500"
         tooltip="根据各模型的官方 API 定价估算总花费（输入+输出+缓存读取）"
+        onClick={() => openDrilldown('cost')}
       />
     </div>
     <div className="grid grid-cols-4 gap-3 px-4 pb-4 pt-3">
@@ -345,6 +354,7 @@ export default function StatsBar() {
         color="text-green-500"
         tooltip="所有项目的 API 请求次数累计"
         tooltipAlign="left"
+        onClick={() => openDrilldown('usage-pattern')}
       />
       <StatCard
         label="近5小时"
