@@ -12,6 +12,7 @@ import CostDrilldown from './components/drilldown/CostDrilldown'
 import SessionDrilldown from './components/drilldown/SessionDrilldown'
 import ModelDrilldown from './components/drilldown/ModelDrilldown'
 import ProjectDrilldown from './components/drilldown/ProjectDrilldown'
+import UsagePatternDrilldown from './components/drilldown/UsagePatternDrilldown'
 import { useDataStore } from './stores/dataStore'
 import { useTokenData } from './hooks/useTokenData'
 import { useTheme } from './hooks/useTheme'
@@ -80,7 +81,7 @@ function App(): React.JSX.Element {
         {drilldown?.type === 'project' && drilldown.params.projectPath && (
           <ProjectDrilldown projectPath={drilldown.params.projectPath} />
         )}
-        {drilldown?.type === 'usage-pattern' && <div>使用模式面板（待实现）</div>}
+        {drilldown?.type === 'usage-pattern' && <UsagePatternDrilldown />}
       </DrilldownDrawer>
     </div>
   )
