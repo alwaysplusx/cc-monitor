@@ -105,6 +105,7 @@ function projectDisplayName(projectPath: string): string {
 export default function SessionTable() {
   const sessionSummaries = useDataStore((s) => s.sessionSummaries)
   const highlightedTimeRange = useDataStore((s) => s.highlightedTimeRange)
+  const openDrilldown = useDataStore((s) => s.openDrilldown)
   const [expanded, setExpanded] = useState<Set<string>>(new Set())
   const [page, setPage] = useState(0)
   const pageSize = 10
@@ -191,14 +192,15 @@ export default function SessionTable() {
                   <Fragment key={session.id}>
                     <tr
                       className={cn(
-                        'border-b border-[var(--border)] transition-colors hover:bg-[var(--accent)]',
+                        'cursor-pointer border-b border-[var(--border)] transition-colors hover:bg-[var(--accent)]',
                         highlighted && 'bg-blue-500/10',
                       )}
+                      onClick={() => openDrilldown('session', { sessionId: session.sessionId })}
                     >
                       <td className={tdCls}>
                         {hasSubagents && (
                           <button
-                            onClick={() => toggleExpand(session.id)}
+                            onClick={(e) => { e.stopPropagation(); toggleExpand(session.id) }}
                             className="text-[var(--muted-foreground)]"
                           >
                             <ChevronRight
@@ -211,7 +213,7 @@ export default function SessionTable() {
                         <div className="flex items-center gap-1">
                           {session.sessionFilePath && (
                             <button
-                              onClick={() => electronApi.openDirectory(session.sessionFilePath).catch(console.error)}
+                              onClick={(e) => { e.stopPropagation(); electronApi.openDirectory(session.sessionFilePath).catch(console.error) }}
                               className="text-[var(--muted-foreground)] hover:text-[var(--foreground)]"
                               title={`打开 ${session.sessionFilePath}`}
                             >
@@ -223,7 +225,7 @@ export default function SessionTable() {
                       </td>
                       <td className={cn(tdCls, 'text-[var(--muted-foreground)]')}>
                         <button
-                          onClick={() => session.projectPath && electronApi.openDirectory(session.projectPath).catch(console.error)}
+                          onClick={(e) => { e.stopPropagation(); session.projectPath && electronApi.openDirectory(session.projectPath).catch(console.error) }}
                           className="flex items-center gap-1 hover:text-[var(--foreground)]"
                           title={session.projectPath}
                         >
