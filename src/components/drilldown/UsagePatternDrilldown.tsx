@@ -106,13 +106,11 @@ export default function UsagePatternDrilldown() {
       },
       legend: {
         data: models,
-        bottom: 0,
+        top: 0,
         type: 'scroll' as const,
         textStyle: { fontSize: 10 },
-        pageIconSize: 10,
-        pageTextStyle: { fontSize: 10 },
       },
-      grid: { top: 12, right: 12, bottom: 36, left: 36 },
+      grid: { top: 36, right: 12, bottom: 24, left: 36 },
       xAxis: {
         type: 'category' as const,
         data: HOURS,
