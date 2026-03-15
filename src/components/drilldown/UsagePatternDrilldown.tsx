@@ -148,7 +148,7 @@ export default function UsagePatternDrilldown() {
           return `${WEEKDAYS[dow]} ${hour}:00 - ${hour + 1}:00<br/>请求数: ${count}`
         },
       },
-      grid: { top: 8, right: 32, bottom: 24, left: 44 },
+      grid: { top: 8, right: 32, bottom: 20, left: 44 },
       xAxis: {
         type: 'category' as const,
         data: HOURS,
@@ -186,13 +186,7 @@ export default function UsagePatternDrilldown() {
         {
           type: 'heatmap',
           data,
-          label: {
-            show: true,
-            fontSize: 9,
-            formatter: (p: { value: [number, number, number] }) =>
-              p.value[2] > 0 ? `${p.value[2]}` : '',
-            color: isDark ? '#e2e8f0' : '#334155',
-          },
+          label: { show: false },
           itemStyle: {
             borderWidth: 1.5,
             borderColor: isDark ? 'var(--background)' : '#ffffff',
@@ -369,7 +363,7 @@ export default function UsagePatternDrilldown() {
         <h3 className="mb-2 text-xs font-medium text-[var(--muted-foreground)]">
           小时 x 星期 热力图
         </h3>
-        <ReactECharts option={heatmapOption} style={{ height: 240 }} />
+        <ReactECharts option={heatmapOption} style={{ height: 160 }} />
       </div>
 
       {/* Hourly request density */}
