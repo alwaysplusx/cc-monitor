@@ -22,6 +22,9 @@ export interface AppSettings {
   minimizeToTray: boolean
   launchAtStartup: boolean
   modelPricing: ModelPricingConfig[]
+  recentHours: number
+  projectMergeThreshold: number
+  turnContentLimit: number
 }
 
 // IPC channel name constants (mirrored from electron/ipc/channels.ts)
@@ -33,6 +36,7 @@ export const IPC_CHANNELS = {
   SAVE_SETTINGS: 'save-settings',
   EXPORT_DATA: 'export-data',
   REFRESH: 'refresh',
+  GET_TURN_DETAIL: 'get-turn-detail',
   DATA_UPDATED: 'data-updated',
   WATCH_ERROR: 'watch-error',
   WATCH_STATUS: 'watch-status',

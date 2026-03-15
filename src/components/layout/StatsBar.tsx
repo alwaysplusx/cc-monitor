@@ -115,6 +115,14 @@ function ColoredToken({ value, color }: { value: number; color: string }) {
   )
 }
 
+/** Format date as local YYYY-MM-DD string (avoids UTC timezone offset from toISOString) */
+function localDateStr(d: Date): string {
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
+}
+
 /** Mini 24-hour density heatmap overlay */
 function HourDensity({ data }: { data: number[] }) {
   const max = Math.max(...data, 1)
@@ -144,9 +152,9 @@ function DailyActiveHours({ records }: { records: { timestamp: Date }[] }) {
     for (let i = 23; i >= 0; i--) {
       const d = new Date(today)
       d.setDate(d.getDate() - i)
-      const dayStr = d.toISOString().slice(0, 10)
+      const dayStr = localDateStr(d)
       const dayLabel = d.toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit' })
-      const dayRecords = records.filter((r) => r.timestamp.toISOString().slice(0, 10) === dayStr)
+      const dayRecords = records.filter((r) => localDateStr(r.timestamp) === dayStr)
       let hours = 0
       if (dayRecords.length > 1) {
         const times = dayRecords.map((r) => r.timestamp.getTime())
@@ -170,6 +178,94 @@ function DailyActiveHours({ records }: { records: { timestamp: Date }[] }) {
             height: d.hours > 0 ? `${Math.max(15, (d.hours / max) * 100)}%` : '10%',
             backgroundColor: d.hours > 0 ? '#f59e0b' : 'var(--muted-foreground)',
             opacity: d.hours > 0 ? 0.3 + (d.hours / max) * 0.7 : 0.15,
+          }}
+        />
+      ))}
+    </div>
+  )
+}
+
+/** Mini 24-day daily token consumption overlay */
+function DailyTokens({ records }: { records: { timestamp: Date; inputTokens: number; outputTokens: number; cacheReadTokens: number }[] }) {
+  const data = useMemo(() => {
+    const today = new Date()
+    const days: { label: string; tokens: number }[] = []
+    for (let i = 23; i >= 0; i--) {
+      const d = new Date(today)
+      d.setDate(d.getDate() - i)
+      const dayStr = localDateStr(d)
+      const dayLabel = d.toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit' })
+      let tokens = 0
+      for (const r of records) {
+        if (localDateStr(r.timestamp) === dayStr) {
+          tokens += r.inputTokens + r.outputTokens + r.cacheReadTokens
+        }
+      }
+      days.push({ label: dayLabel, tokens })
+    }
+    return days
+  }, [records])
+
+  const max = Math.max(...data.map((d) => d.tokens), 1)
+
+  return (
+    <div className="absolute inset-x-0 bottom-0 z-20 flex items-end overflow-hidden rounded-b-lg opacity-25 hover:opacity-60 transition-opacity" style={{ height: '66%' }}>
+      {data.map((d, i) => (
+        <div
+          key={i}
+          className="flex-1"
+          title={`${d.label}  ${d.tokens > 0 ? fmtK(d.tokens) : '无数据'}`}
+          style={{
+            height: d.tokens > 0 ? `${Math.max(15, (d.tokens / max) * 100)}%` : '10%',
+            backgroundColor: d.tokens > 0 ? '#f97316' : 'var(--muted-foreground)',
+            opacity: d.tokens > 0 ? 0.3 + (d.tokens / max) * 0.7 : 0.15,
+          }}
+        />
+      ))}
+    </div>
+  )
+}
+
+/** Mini 24-bar pulse chart for last 4 hours (each bar = 10 min) */
+function RecentPulse({ records }: { records: { timestamp: Date; inputTokens: number; outputTokens: number; cacheReadTokens: number }[] }) {
+  const data = useMemo(() => {
+    const now = Date.now()
+    const bucketCount = 24
+    const bucketMs = 10 * 60 * 1000
+    // Align end to next 10-min boundary so buckets are like 18:00-18:10, 18:10-18:20
+    const endAligned = Math.ceil(now / bucketMs) * bucketMs
+    const startAligned = endAligned - bucketCount * bucketMs
+    const buckets = new Array(bucketCount).fill(0)
+    for (const r of records) {
+      const t = r.timestamp.getTime()
+      if (t >= startAligned && t < endAligned) {
+        const idx = Math.floor((t - startAligned) / bucketMs)
+        if (idx >= 0 && idx < bucketCount) {
+          buckets[idx] += r.inputTokens + r.outputTokens + r.cacheReadTokens
+        }
+      }
+    }
+    const fmt = (d: Date) => d.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
+    return buckets.map((tokens, i) => {
+      const bucketStart = new Date(startAligned + i * bucketMs)
+      const bucketEnd = new Date(startAligned + (i + 1) * bucketMs)
+      return { tokens, label: `${fmt(bucketStart)}-${fmt(bucketEnd)}` }
+    })
+  }, [records])
+
+  const max = Math.max(...data.map((d) => d.tokens), 1)
+
+  return (
+    <div className="absolute inset-x-0 bottom-0 z-20 flex items-end overflow-hidden rounded-b-lg opacity-25 hover:opacity-60 transition-opacity" style={{ height: '66%' }}>
+      {data.map((d, i) => (
+        <div
+          key={i}
+          className="flex-1"
+          title={`${d.label}  ${d.tokens > 0 ? fmtK(d.tokens) : '无活动'}`}
+          style={{
+            height: d.tokens > 0 ? `${Math.max(15, (d.tokens / max) * 100)}%` : '10%',
+            backgroundColor: d.tokens > 0 ? '#f43f5e' : 'var(--muted-foreground)',
+            opacity: d.tokens > 0 ? 0.3 + (d.tokens / max) * 0.7 : 0.15,
           }}
         />
       ))}
@@ -283,9 +379,10 @@ export default function StatsBar() {
     ? (totalCacheRead / (totalInput + totalCacheRead)) * 100
     : 0
 
-  // Last 5 hours stats
-  const fiveHoursAgo = new Date(Date.now() - 5 * 60 * 60 * 1000)
-  const recent = records.filter((r) => r.timestamp >= fiveHoursAgo)
+  // Recent N hours stats (configurable)
+  const recentHours = useSettingsStore((s) => s.recentHours)
+  const recentCutoff = new Date(Date.now() - recentHours * 60 * 60 * 1000)
+  const recent = records.filter((r) => r.timestamp >= recentCutoff)
   const recentInput = recent.reduce((s, r) => s + r.inputTokens, 0)
   const recentOutput = recent.reduce((s, r) => s + r.outputTokens, 0)
   const recentCache = recent.reduce((s, r) => s + r.cacheReadTokens, 0)
@@ -431,8 +528,9 @@ export default function StatsBar() {
         onClick={() => openDrilldown('usage-pattern')}
       />
       <StatCard
-        label="近5小时"
+        label={`近${recentHours}小时`}
         value={fmtK(recentTotal)}
+        bgNode={<RecentPulse records={records} />}
         subtextNode={
           <div className="flex items-center gap-1.5 text-xs">
             <ColoredToken value={recentInput} color="text-blue-500" />
@@ -445,11 +543,12 @@ export default function StatsBar() {
           </div>
         }
         color="text-rose-500"
-        tooltip="最近5小时的输入+输出+缓存 Token 合计"
+        tooltip={`最近${recentHours}小时的输入+输出+缓存 Token 合计`}
       />
       <StatCard
         label="近24小时"
         value={fmtK(todayTotal)}
+        bgNode={<DailyTokens records={records} />}
         subtextNode={
           <div className="flex items-baseline gap-x-2 text-xs">
             <span className="whitespace-nowrap text-[var(--muted-foreground)]">

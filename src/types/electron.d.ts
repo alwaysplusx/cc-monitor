@@ -28,6 +28,19 @@ export interface ElectronAPI {
   selectDirectory(): Promise<string | null>
   exportData(format: 'csv' | 'json', data: object): Promise<string>
   openDirectory(dirPath: string): Promise<void>
+  getTurnDetail(params: {
+    fileName: string
+    sessionId: string
+    timestamp: string
+    contentLimit?: number
+  }): Promise<{
+    userMessage: string
+    assistantText: string
+    assistantThinking: string
+    toolCalls: { name: string; input: string }[]
+    model: string
+    timestamp: string
+  } | null>
   getSettings(): Promise<AppSettings>
   saveSettings(settings: Partial<AppSettings>): Promise<void>
   onDataUpdated(callback: (projectPath: string) => void): () => void

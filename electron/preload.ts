@@ -10,6 +10,8 @@ const api = {
   exportData: (format: 'csv' | 'json', data: object) =>
     ipcRenderer.invoke(IPC.EXPORT_DATA, format, data),
   openDirectory: (dirPath: string) => ipcRenderer.invoke(IPC.OPEN_DIRECTORY, dirPath),
+  getTurnDetail: (params: { fileName: string; sessionId: string; timestamp: string; contentLimit?: number }) =>
+    ipcRenderer.invoke(IPC.GET_TURN_DETAIL, params),
   getSettings: () => ipcRenderer.invoke(IPC.GET_SETTINGS),
   saveSettings: (settings: object) => ipcRenderer.invoke(IPC.SAVE_SETTINGS, settings),
   onDataUpdated: (callback: (projectPath: string) => void) => {

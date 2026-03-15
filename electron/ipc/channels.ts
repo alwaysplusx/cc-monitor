@@ -9,6 +9,7 @@ export const IPC = {
   EXPORT_DATA: 'export-data',
   OPEN_DIRECTORY: 'open-directory',
   REFRESH: 'refresh',
+  GET_TURN_DETAIL: 'get-turn-detail',
 
   // Main → Renderer (push events)
   DATA_UPDATED: 'data-updated',

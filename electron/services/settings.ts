@@ -28,6 +28,9 @@ const defaultSettings: AppSettings = {
     { match: 'haiku', input: 1, output: 5, cacheRead: 0.10 },
     { match: 'glm-4.7', input: 0.38, output: 1.98, cacheRead: 0.19 },
   ],
+  recentHours: 5,
+  projectMergeThreshold: 1,
+  turnContentLimit: 1000,
 }
 
 /**

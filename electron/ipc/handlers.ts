@@ -13,6 +13,7 @@ import {
   detectModelSwitches,
 } from '../services/aggregator'
 import { readSettings, writeSettings } from '../services/settings'
+import { getTurnDetail } from '../services/turn-detail'
 import type { AppSettings } from '../../src/types/ipc'
 
 const fileCache = new FileCache()
@@ -67,6 +68,13 @@ export function registerIpcHandlers(): void {
   ipcMain.handle(IPC.OPEN_DIRECTORY, (_event, filePath: string) => {
     shell.showItemInFolder(filePath)
   })
+
+  ipcMain.handle(
+    IPC.GET_TURN_DETAIL,
+    (_event, params: { fileName: string; sessionId: string; timestamp: string; contentLimit?: number }) => {
+      return getTurnDetail(params.fileName, params.sessionId, params.timestamp, params.contentLimit)
+    },
+  )
 
   ipcMain.handle(IPC.REFRESH, () => {
     const settings = readSettings()

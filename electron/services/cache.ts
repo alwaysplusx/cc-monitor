@@ -15,20 +15,26 @@ interface CacheEntry {
 export class FileCache {
   private cache = new Map<string, CacheEntry>()
 
+  /** Normalize path separators to forward slashes for consistent cache keys */
+  private normalizePath(p: string): string {
+    return p.replace(/\\/g, '/')
+  }
+
   /**
    * Get records from cache if file unchanged, otherwise parse (incrementally if possible).
    */
   getOrParse(filePath: string): TokenRecord[] {
+    const key = this.normalizePath(filePath)
     let stat
     try {
       stat = statSync(filePath)
     } catch {
       // File doesn't exist — remove from cache
-      this.cache.delete(filePath)
+      this.cache.delete(key)
       return []
     }
 
-    const existing = this.cache.get(filePath)
+    const existing = this.cache.get(key)
 
     // Cache hit: file unchanged
     if (existing && existing.lastSize === stat.size && existing.lastModified === stat.mtimeMs) {
@@ -41,7 +47,7 @@ export class FileCache {
       const mergedRecords = [...existing.records, ...result.tokenRecords]
       const mergedMessages = new Map([...existing.userMessages, ...result.userMessages])
 
-      this.cache.set(filePath, {
+      this.cache.set(key, {
         lastSize: stat.size,
         lastModified: stat.mtimeMs,
         records: mergedRecords,
@@ -53,7 +59,7 @@ export class FileCache {
 
     // Full parse: new file or file was modified in unexpected way
     const result = parseJsonlFile(filePath)
-    this.cache.set(filePath, {
+    this.cache.set(key, {
       lastSize: stat.size,
       lastModified: stat.mtimeMs,
       records: result.tokenRecords,
@@ -67,7 +73,7 @@ export class FileCache {
    * Remove a specific file from cache.
    */
   invalidate(filePath: string): void {
-    this.cache.delete(filePath)
+    this.cache.delete(this.normalizePath(filePath))
   }
 
   /**
@@ -109,11 +115,10 @@ export class FileCache {
    * projectPath is the ~/.claude/projects/<encoded-dir> path.
    */
   getRecordsByProject(projectPath: string): TokenRecord[] {
-    const normalized = projectPath.replace(/\\/g, '/')
+    const normalized = this.normalizePath(projectPath)
     const records: TokenRecord[] = []
     for (const [filePath, entry] of this.cache.entries()) {
-      const normalizedFile = filePath.replace(/\\/g, '/')
-      if (normalizedFile.startsWith(normalized + '/') || normalizedFile.startsWith(normalized + '\\')) {
+      if (filePath.startsWith(normalized + '/')) {
         records.push(...entry.records)
       }
     }

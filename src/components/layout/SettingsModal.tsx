@@ -65,6 +65,12 @@ export default function SettingsModal() {
   // Local draft state
   const [claudeDataDir, setClaudeDataDir] = useState('')
   const [watchEnabled, setWatchEnabled] = useState(true)
+  const [refreshIntervalMs, setRefreshIntervalMs] = useState(30000)
+  const [minimizeToTray, setMinimizeToTray] = useState(false)
+  const [launchAtStartup, setLaunchAtStartup] = useState(false)
+  const [recentHours, setRecentHours] = useState(5)
+  const [projectMergeThreshold, setProjectMergeThreshold] = useState(1)
+  const [turnContentLimit, setTurnContentLimit] = useState(1000)
   const [pricing, setPricing] = useState<ModelPricingConfig[]>([])
   const [saving, setSaving] = useState(false)
 
@@ -73,6 +79,12 @@ export default function SettingsModal() {
     if (open) {
       setClaudeDataDir(storeSettings.claudeDataDir)
       setWatchEnabled(storeSettings.watchEnabled)
+      setRefreshIntervalMs(storeSettings.refreshIntervalMs)
+      setMinimizeToTray(storeSettings.minimizeToTray)
+      setLaunchAtStartup(storeSettings.launchAtStartup)
+      setRecentHours(storeSettings.recentHours)
+      setProjectMergeThreshold(storeSettings.projectMergeThreshold)
+      setTurnContentLimit(storeSettings.turnContentLimit)
       setPricing(storeSettings.modelPricing.map((p) => ({ ...p })))
     }
   }, [open])
@@ -92,12 +104,15 @@ export default function SettingsModal() {
       const settings: AppSettings = {
         claudeDataDir,
         watchEnabled,
-        refreshIntervalMs: storeSettings.refreshIntervalMs,
+        refreshIntervalMs,
         theme: storeSettings.theme,
         planType: storeSettings.planType,
         customTokenLimit: storeSettings.customTokenLimit,
-        minimizeToTray: storeSettings.minimizeToTray,
-        launchAtStartup: storeSettings.launchAtStartup,
+        minimizeToTray,
+        launchAtStartup,
+        recentHours,
+        projectMergeThreshold,
+        turnContentLimit,
         modelPricing: pricing.filter((p) => p.match.trim() !== ''),
       }
       await electronApi.saveSettings(settings)
@@ -106,7 +121,7 @@ export default function SettingsModal() {
     } finally {
       setSaving(false)
     }
-  }, [storeSettings, claudeDataDir, watchEnabled, pricing, loadSettings, setOpen])
+  }, [storeSettings, claudeDataDir, watchEnabled, refreshIntervalMs, minimizeToTray, launchAtStartup, recentHours, projectMergeThreshold, turnContentLimit, pricing, loadSettings, setOpen])
 
   if (!open) return null
 
@@ -148,18 +163,106 @@ export default function SettingsModal() {
             </div>
           </section>
 
-          {/* Watch toggle */}
+          {/* Watch & polling */}
           <section>
-            <h3 className="mb-2 text-xs font-semibold text-[var(--muted-foreground)]">文件监控</h3>
-            <label className="flex cursor-pointer items-center gap-2 text-xs text-[var(--foreground)]">
-              <input
-                type="checkbox"
-                checked={watchEnabled}
-                onChange={(e) => setWatchEnabled(e.target.checked)}
-                className="accent-[var(--primary)]"
-              />
-              启用文件变更自动监控
-            </label>
+            <h3 className="mb-2 text-xs font-semibold text-[var(--muted-foreground)]">监控与刷新</h3>
+            <div className="space-y-2">
+              <label className="flex cursor-pointer items-center gap-2 text-xs text-[var(--foreground)]">
+                <input
+                  type="checkbox"
+                  checked={watchEnabled}
+                  onChange={(e) => setWatchEnabled(e.target.checked)}
+                  className="accent-[var(--primary)]"
+                />
+                启用文件变更自动监控
+              </label>
+              <div className="flex items-center gap-2 text-xs text-[var(--foreground)]">
+                <span className="w-20 text-[var(--muted-foreground)]">轮询间隔</span>
+                <select
+                  value={refreshIntervalMs}
+                  onChange={(e) => setRefreshIntervalMs(Number(e.target.value))}
+                  className="rounded border border-[var(--border)] bg-[var(--background)] px-2 py-1 text-xs text-[var(--foreground)] outline-none focus:border-[var(--primary)]"
+                >
+                  <option value={15000}>15 秒</option>
+                  <option value={30000}>30 秒</option>
+                  <option value={60000}>1 分钟</option>
+                  <option value={180000}>3 分钟</option>
+                  <option value={300000}>5 分钟</option>
+                </select>
+              </div>
+            </div>
+          </section>
+
+          {/* System behavior */}
+          <section>
+            <h3 className="mb-2 text-xs font-semibold text-[var(--muted-foreground)]">系统行为</h3>
+            <div className="space-y-2">
+              <label className="flex cursor-pointer items-center gap-2 text-xs text-[var(--foreground)]">
+                <input
+                  type="checkbox"
+                  checked={minimizeToTray}
+                  onChange={(e) => setMinimizeToTray(e.target.checked)}
+                  className="accent-[var(--primary)]"
+                />
+                关闭窗口时最小化到系统托盘
+              </label>
+              <label className="flex cursor-pointer items-center gap-2 text-xs text-[var(--foreground)]">
+                <input
+                  type="checkbox"
+                  checked={launchAtStartup}
+                  onChange={(e) => setLaunchAtStartup(e.target.checked)}
+                  className="accent-[var(--primary)]"
+                />
+                开机自动启动
+              </label>
+            </div>
+          </section>
+
+          {/* Display preferences */}
+          <section>
+            <h3 className="mb-2 text-xs font-semibold text-[var(--muted-foreground)]">显示偏好</h3>
+            <div className="space-y-2">
+              <div className="flex items-center gap-2 text-xs text-[var(--foreground)]">
+                <span className="w-28 text-[var(--muted-foreground)]">近 N 小时窗口</span>
+                <select
+                  value={recentHours}
+                  onChange={(e) => setRecentHours(Number(e.target.value))}
+                  className="rounded border border-[var(--border)] bg-[var(--background)] px-2 py-1 text-xs text-[var(--foreground)] outline-none focus:border-[var(--primary)]"
+                >
+                  <option value={1}>1 小时</option>
+                  <option value={2}>2 小时</option>
+                  <option value={3}>3 小时</option>
+                  <option value={5}>5 小时</option>
+                  <option value={8}>8 小时</option>
+                </select>
+              </div>
+              <div className="flex items-center gap-2 text-xs text-[var(--foreground)]">
+                <span className="w-28 text-[var(--muted-foreground)]">项目合并阈值</span>
+                <select
+                  value={projectMergeThreshold}
+                  onChange={(e) => setProjectMergeThreshold(Number(e.target.value))}
+                  className="rounded border border-[var(--border)] bg-[var(--background)] px-2 py-1 text-xs text-[var(--foreground)] outline-none focus:border-[var(--primary)]"
+                >
+                  <option value={1}>{'< 1%'}</option>
+                  <option value={3}>{'< 3%'}</option>
+                  <option value={5}>{'< 5%'}</option>
+                </select>
+                <span className="text-[10px] text-[var(--muted-foreground)]">合并为「其他」</span>
+              </div>
+              <div className="flex items-center gap-2 text-xs text-[var(--foreground)]">
+                <span className="w-28 text-[var(--muted-foreground)]">轮次内容长度</span>
+                <select
+                  value={turnContentLimit}
+                  onChange={(e) => setTurnContentLimit(Number(e.target.value))}
+                  className="rounded border border-[var(--border)] bg-[var(--background)] px-2 py-1 text-xs text-[var(--foreground)] outline-none focus:border-[var(--primary)]"
+                >
+                  <option value={500}>500 字</option>
+                  <option value={1000}>1000 字</option>
+                  <option value={2000}>2000 字</option>
+                  <option value={5000}>5000 字</option>
+                </select>
+              </div>
+            </div>
           </section>
 
           {/* Model pricing */}

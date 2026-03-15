@@ -1,5 +1,5 @@
 // Session drilldown panel — session info, request timeline, model breakdown, subagents
-import { useMemo } from 'react'
+import { useMemo, useState, useCallback } from 'react'
 import ReactECharts from 'echarts-for-react'
 import { useDataStore } from '../../stores/dataStore'
 import { useSettingsStore } from '../../stores/settingsStore'
@@ -22,6 +22,7 @@ export default function SessionDrilldown({ sessionId }: { sessionId: string }) {
   const records = useDataStore((s) => s.tokenRecords)
   const sessionSummaries = useDataStore((s) => s.sessionSummaries)
   const modelPricing = useSettingsStore((s) => s.modelPricing)
+  const turnContentLimit = useSettingsStore((s) => s.turnContentLimit)
   const { isDark } = useTheme()
 
   const axisLabelColor = isDark ? '#8892a8' : '#64748b'
@@ -105,7 +106,24 @@ export default function SessionDrilldown({ sessionId }: { sessionId: string }) {
 ${params.map((p) => `${p.seriesName}: ${fmtK(p.value)}`).join('<br/>')}`
         },
       },
-      grid: { top: 12, right: 12, bottom: 24, left: 44 },
+      grid: { top: 12, right: 12, bottom: sessionRecords.length > 30 ? 44 : 24, left: 44 },
+      ...(sessionRecords.length > 30
+        ? {
+            dataZoom: [
+              {
+                type: 'slider' as const,
+                height: 16,
+                bottom: 2,
+                startValue: Math.max(0, sessionRecords.length - 30),
+                endValue: sessionRecords.length - 1,
+                borderColor: 'transparent',
+                fillerColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)',
+                handleSize: '60%',
+                textStyle: { fontSize: 9, color: axisLabelColor },
+              },
+            ],
+          }
+        : {}),
       xAxis: {
         type: 'category' as const,
         data: sessionRecords.map((_, i) => `#${i + 1}`),
@@ -182,6 +200,50 @@ ${params.map((p) => `${p.seriesName}: ${fmtK(p.value)}`).join('<br/>')}`
     [sessionSummaries, sessionId],
   )
 
+  // Turn detail state
+  const [turnDetail, setTurnDetail] = useState<{
+    index: number
+    userMessage: string
+    assistantText: string
+    assistantThinking: string
+    toolCalls: { name: string; input: string }[]
+    model: string
+    timestamp: string
+  } | null>(null)
+  const [turnLoading, setTurnLoading] = useState(false)
+
+  const handleBarClick = useCallback(
+    async (params: { dataIndex: number }) => {
+      const idx = params.dataIndex
+      const record = sessionRecords[idx]
+      if (!record) return
+
+      // Toggle off if clicking the same bar
+      if (turnDetail?.index === idx) {
+        setTurnDetail(null)
+        return
+      }
+
+      setTurnLoading(true)
+      try {
+        const result = await window.api.getTurnDetail({
+          fileName: record.fileName,
+          sessionId: record.sessionId,
+          timestamp: record.timestamp.toISOString(),
+          contentLimit: turnContentLimit,
+        })
+        if (result) {
+          setTurnDetail({ index: idx, ...result })
+        } else {
+          setTurnDetail(null)
+        }
+      } finally {
+        setTurnLoading(false)
+      }
+    },
+    [sessionRecords, turnDetail],
+  )
+
   if (!session) {
     return (
       <div className="py-8 text-center text-sm text-[var(--muted-foreground)]">
@@ -239,6 +301,7 @@ ${params.map((p) => `${p.seriesName}: ${fmtK(p.value)}`).join('<br/>')}`
           <ReactECharts
             option={timelineOption}
             style={{ height: 200 }}
+            onEvents={{ click: handleBarClick }}
           />
         </div>
       )}
@@ -298,6 +361,105 @@ ${params.map((p) => `${p.seriesName}: ${fmtK(p.value)}`).join('<br/>')}`
               )
             })}
           </div>
+        </div>
+      )}
+      {/* Turn detail panel */}
+      {turnLoading && (
+        <div className="text-center text-xs text-[var(--muted-foreground)]">加载中...</div>
+      )}
+      {turnDetail && !turnLoading && (
+        <div className="space-y-2 rounded-lg border border-[var(--border)] bg-[var(--muted)]/30 p-3">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-medium text-[var(--muted-foreground)]">
+              #{turnDetail.index + 1} 轮次详情
+              <span className="ml-2 font-mono opacity-60">{turnDetail.model}</span>
+            </span>
+            <button
+              onClick={() => setTurnDetail(null)}
+              className="text-xs text-[var(--muted-foreground)] hover:text-[var(--foreground)]"
+            >
+              关闭
+            </button>
+          </div>
+          {(() => {
+            const r = sessionRecords[turnDetail.index]
+            if (!r) return null
+            const pricing = getModelPricing(r.model, modelPricing)
+            const turnCost =
+              (r.inputTokens / 1_000_000) * pricing.input +
+              (r.outputTokens / 1_000_000) * pricing.output +
+              (r.cacheReadTokens / 1_000_000) * pricing.cacheRead
+            const prevRecord = turnDetail.index > 0 ? sessionRecords[turnDetail.index - 1] : null
+            const intervalMs = prevRecord
+              ? r.timestamp.getTime() - prevRecord.timestamp.getTime()
+              : 0
+            const fmtInterval = (ms: number) => {
+              if (ms < 1000) return `${ms}ms`
+              if (ms < 60_000) return `${(ms / 1000).toFixed(1)}s`
+              return `${(ms / 60_000).toFixed(1)}min`
+            }
+            const rows: [string, string, string][] = [
+              ['输入', fmtK(r.inputTokens), 'text-blue-500'],
+              ['输出', fmtK(r.outputTokens), 'text-purple-500'],
+              ['缓存读取', fmtK(r.cacheReadTokens), 'text-cyan-500'],
+              ...(r.cacheCreateTokens > 0
+                ? [['缓存写入', fmtK(r.cacheCreateTokens), 'text-teal-500'] as [string, string, string]]
+                : []),
+              ['预估费用', `$${turnCost.toFixed(4)}`, 'text-emerald-500'],
+              ['时间', r.timestamp.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', second: '2-digit' }), ''],
+              ...(intervalMs > 0
+                ? [['距上轮间隔', fmtInterval(intervalMs), ''] as [string, string, string]]
+                : []),
+            ]
+            return (
+              <table className="w-full text-xs">
+                <tbody>
+                  {rows.map(([label, value, color]) => (
+                    <tr key={label} className="border-b border-[var(--border)] last:border-b-0">
+                      <td className="py-1 pr-4 text-[var(--muted-foreground)]">{label}</td>
+                      <td className={`py-1 font-mono font-semibold ${color}`}>{value}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )
+          })()}
+          {turnDetail.userMessage && (
+            <div>
+              <div className="mb-1 text-[10px] font-medium text-blue-500">用户输入</div>
+              <div className="max-h-48 overflow-y-auto whitespace-pre-wrap rounded-md bg-[var(--card)] p-2 text-xs text-[var(--foreground)]">
+                {turnDetail.userMessage}
+              </div>
+            </div>
+          )}
+          {turnDetail.assistantText && (
+            <div>
+              <div className="mb-1 text-[10px] font-medium text-purple-500">模型输出</div>
+              <div className="max-h-48 overflow-y-auto whitespace-pre-wrap rounded-md bg-[var(--card)] p-2 text-xs text-[var(--foreground)]">
+                {turnDetail.assistantText}
+              </div>
+            </div>
+          )}
+          {turnDetail.toolCalls.length > 0 && (
+            <div>
+              <div className="mb-1 text-[10px] font-medium text-amber-500">
+                工具调用 ({turnDetail.toolCalls.length})
+              </div>
+              <div className="max-h-60 space-y-1 overflow-y-auto">
+                {turnDetail.toolCalls.map((t, i) => (
+                  <div key={i} className="rounded-md bg-[var(--card)] p-2 text-xs">
+                    <span className="font-mono font-semibold text-amber-500">{t.name}</span>
+                    <pre className="mt-1 overflow-x-auto whitespace-pre-wrap break-all font-mono text-[10px] text-[var(--muted-foreground)]">
+                      {t.input}
+                    </pre>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+          {!turnDetail.userMessage && !turnDetail.assistantText && turnDetail.toolCalls.length === 0 && (
+            <div className="text-xs text-[var(--muted-foreground)]">未找到该轮次的消息内容</div>
+          )}
         </div>
       )}
     </div>

@@ -3,6 +3,7 @@ import { useMemo } from 'react'
 import ReactECharts from 'echarts-for-react'
 import type { EChartsOption } from 'echarts'
 import { useDataStore } from '../../stores/dataStore'
+import { useSettingsStore } from '../../stores/settingsStore'
 import { useTheme } from '../../hooks/useTheme'
 import { echartsLightTheme, echartsDarkTheme } from '../../lib/theme'
 import { fmtK } from '../../lib/format'
@@ -24,6 +25,7 @@ export default function ProjectPie() {
   const tokenRecords = useDataStore((s) => s.tokenRecords)
   const openDrilldown = useDataStore((s) => s.openDrilldown)
   const { isDark } = useTheme()
+  const mergeThreshold = useSettingsStore((s) => s.projectMergeThreshold)
 
   const { chartProjects, allProjects, totalTokens } = useMemo(() => {
     const map = new Map<string, { input: number; output: number; cacheRead: number }>()
@@ -45,9 +47,9 @@ export default function ProjectPie() {
       })
       .sort((a, b) => b.total - a.total)
 
-    // Chart data: merge <1% into "其他"
-    const chartMajor = all.filter((p) => p.percentage >= 1)
-    const chartMinor = all.filter((p) => p.percentage < 1)
+    // Chart data: merge below threshold into "其他"
+    const chartMajor = all.filter((p) => p.percentage >= mergeThreshold)
+    const chartMinor = all.filter((p) => p.percentage < mergeThreshold)
     const chartProjects = [...chartMajor]
     if (chartMinor.length > 0) {
       chartProjects.push({
@@ -63,7 +65,7 @@ export default function ProjectPie() {
 
     // List data: show all projects
     return { chartProjects, allProjects: all, totalTokens: total }
-  }, [tokenRecords])
+  }, [tokenRecords, mergeThreshold])
 
   const option: EChartsOption = useMemo(() => {
     const themeObj = isDark ? echartsDarkTheme : echartsLightTheme

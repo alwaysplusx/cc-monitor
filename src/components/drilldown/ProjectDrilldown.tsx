@@ -281,8 +281,11 @@ export default function ProjectDrilldown({ projectPath }: { projectPath: string 
                 onClick={() => openDrilldown('session', { sessionId: s.sessionId })}
                 className="group/row flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-xs transition-colors hover:bg-[var(--muted)]"
               >
-                <span className="w-4 shrink-0 text-right font-mono text-[var(--muted-foreground)]">
-                  {i + 1}
+                <span className="w-5 shrink-0 font-mono text-[var(--muted-foreground)]">
+                  #{i + 1}
+                </span>
+                <span className="w-20 shrink-0 truncate font-mono text-[var(--muted-foreground)]" title={s.sessionId}>
+                  {s.sessionId.slice(0, 8)}
                 </span>
                 <span className="min-w-0 flex-1 truncate">{s.firstUserMessage}</span>
                 <span className="shrink-0 text-[var(--muted-foreground)]">

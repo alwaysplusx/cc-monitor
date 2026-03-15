@@ -419,11 +419,11 @@ export default function CostDrilldown() {
                 onClick={() => openDrilldown('session', { sessionId: s.sessionId })}
                 className="group/row flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-xs transition-colors hover:bg-[var(--muted)]"
               >
-                <span className="w-5 shrink-0 text-right font-mono text-[var(--muted-foreground)]">
-                  {i + 1}
+                <span className="w-5 shrink-0 font-mono text-[var(--muted-foreground)]">
+                  #{i + 1}
                 </span>
-                <span className="w-20 shrink-0 truncate text-[var(--muted-foreground)]" title={s.project}>
-                  {s.project}
+                <span className="w-20 shrink-0 truncate font-mono text-[var(--muted-foreground)]" title={s.sessionId}>
+                  {s.sessionId.slice(0, 8)}
                 </span>
                 <span className="w-52 shrink-0 truncate" title={s.summary}>
                   {s.summary}
