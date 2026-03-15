@@ -178,7 +178,7 @@ export default function UsagePatternDrilldown() {
         textStyle: { fontSize: 9 },
         inRange: {
           color: isDark
-            ? ['#1e293b', '#1e3a5f', '#2563eb', '#60a5fa', '#93c5fd']
+            ? ['#0f172a', '#1e3a5f', '#2563eb', '#60a5fa', '#93c5fd']
             : ['#eff6ff', '#dbeafe', '#93c5fd', '#3b82f6', '#1d4ed8'],
         },
       },
@@ -189,7 +189,7 @@ export default function UsagePatternDrilldown() {
           label: { show: false },
           itemStyle: {
             borderWidth: 1.5,
-            borderColor: isDark ? '#1e293b' : '#ffffff',
+            borderColor: isDark ? '#334155' : '#ffffff',
             borderRadius: 2,
           },
           emphasis: {
@@ -239,10 +239,12 @@ export default function UsagePatternDrilldown() {
         type: 'category' as const,
         data: HOURS,
         axisLabel: { fontSize: 10 },
+        splitLine: { show: false },
       },
       yAxis: {
         type: 'value' as const,
         axisLabel: { fontSize: 10 },
+        splitLine: { lineStyle: { color: isDark ? '#1e293b' : '#e2e8f0' } },
       },
       series: hourlyModels.map((model, i) => ({
         name: model,
@@ -254,7 +256,7 @@ export default function UsagePatternDrilldown() {
         itemStyle: { color: MODEL_COLORS[i % MODEL_COLORS.length] },
       })),
     }
-  }, [records, hourlyModels, hiddenModels])
+  }, [records, hourlyModels, hiddenModels, isDark])
 
   // Daily active periods (Gantt-style): last 7 days
   const ganttOption = useMemo(() => {
@@ -338,12 +340,14 @@ export default function UsagePatternDrilldown() {
         max: 24,
         interval: 4,
         axisLabel: { fontSize: 10, formatter: (v: number) => `${v}:00` },
+        splitLine: { lineStyle: { color: isDark ? '#1e293b' : '#e2e8f0' } },
       },
       yAxis: {
         type: 'category' as const,
         data: days.map((d) => d.slice(5)),
         axisLabel: { fontSize: 10 },
         inverse: true,
+        splitLine: { show: false },
       },
       series: [
         {
@@ -354,7 +358,7 @@ export default function UsagePatternDrilldown() {
         },
       ],
     }
-  }, [records])
+  }, [records, isDark])
 
   return (
     <div className="space-y-5">
