@@ -2,6 +2,7 @@
 import { useMemo } from 'react'
 import ReactECharts from 'echarts-for-react'
 import { useDataStore } from '../../stores/dataStore'
+import { useTheme } from '../../hooks/useTheme'
 
 const WEEKDAYS = ['周一', '周二', '周三', '周四', '周五', '周六', '周日']
 const HOURS = Array.from({ length: 24 }, (_, i) => `${i}`)
@@ -10,6 +11,7 @@ const MODEL_COLORS = ['#3b82f6', '#8b5cf6', '#06b6d4', '#10b981', '#f59e0b', '#e
 
 export default function UsagePatternDrilldown() {
   const records = useDataStore((s) => s.tokenRecords)
+  const { isDark } = useTheme()
 
   // Hour x Weekday heatmap data
   const heatmapOption = useMemo(() => {
@@ -66,7 +68,9 @@ export default function UsagePatternDrilldown() {
         itemHeight: 80,
         textStyle: { fontSize: 9 },
         inRange: {
-          color: ['#1a1a2e', '#16213e', '#0f3460', '#3b82f6', '#60a5fa', '#93c5fd'],
+          color: isDark
+            ? ['#1a1a2e', '#16213e', '#0f3460', '#3b82f6', '#60a5fa', '#93c5fd']
+            : ['#f0f4ff', '#dbeafe', '#bfdbfe', '#93c5fd', '#60a5fa', '#3b82f6'],
         },
       },
       series: [
@@ -80,7 +84,7 @@ export default function UsagePatternDrilldown() {
         },
       ],
     }
-  }, [records])
+  }, [records, isDark])
 
   // Hourly request density (24 bars, stacked by model)
   const hourlyOption = useMemo(() => {
