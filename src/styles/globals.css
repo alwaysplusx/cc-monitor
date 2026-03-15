@@ -42,26 +42,26 @@
 
 .dark {
   --background: #0a0e17;
-  --foreground: #e2e8f0;
+  --foreground: #c9d1d9;
   --card: #111827;
-  --card-foreground: #e2e8f0;
+  --card-foreground: #c9d1d9;
   --popover: #111827;
-  --popover-foreground: #e2e8f0;
+  --popover-foreground: #c9d1d9;
   --primary: #3b82f6;
   --primary-foreground: #ffffff;
   --secondary: #151d2e;
-  --secondary-foreground: #e2e8f0;
+  --secondary-foreground: #c9d1d9;
   --muted: #151d2e;
   --muted-foreground: #8892a8;
   --accent: #151d2e;
-  --accent-foreground: #e2e8f0;
+  --accent-foreground: #c9d1d9;
   --destructive: #ef4444;
   --destructive-foreground: #ffffff;
   --border: #1e293b;
   --input: #1e293b;
   --ring: #3b82f6;
 
-  --text-primary: #e2e8f0;
+  --text-primary: #c9d1d9;
   --text-secondary: #8892a8;
   --text-tertiary: #4a5568;
 

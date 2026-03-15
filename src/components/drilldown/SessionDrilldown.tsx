@@ -3,6 +3,7 @@ import { useMemo } from 'react'
 import ReactECharts from 'echarts-for-react'
 import { useDataStore } from '../../stores/dataStore'
 import { useSettingsStore } from '../../stores/settingsStore'
+import { useTheme } from '../../hooks/useTheme'
 import { getModelPricing, CHART_COLORS } from '../../lib/constants'
 import { fmtK, fmtDuration } from '../../lib/format'
 
@@ -21,6 +22,11 @@ export default function SessionDrilldown({ sessionId }: { sessionId: string }) {
   const records = useDataStore((s) => s.tokenRecords)
   const sessionSummaries = useDataStore((s) => s.sessionSummaries)
   const modelPricing = useSettingsStore((s) => s.modelPricing)
+  const { isDark } = useTheme()
+
+  const axisLabelColor = isDark ? '#8892a8' : '#64748b'
+  const splitLineColor = isDark ? '#151d2e' : '#f1f5f9'
+  const axisLineColor = isDark ? '#1e293b' : '#e2e8f0'
 
   // Filter records for this session
   const sessionRecords = useMemo(
@@ -81,6 +87,9 @@ export default function SessionDrilldown({ sessionId }: { sessionId: string }) {
     return {
       tooltip: {
         trigger: 'axis' as const,
+        backgroundColor: isDark ? '#111827' : '#ffffff',
+        borderColor: isDark ? '#1e293b' : '#e2e8f0',
+        textStyle: { color: isDark ? '#c9d1d9' : '#1a202c' },
         formatter: (
           params: { seriesName: string; value: number; dataIndex: number }[],
         ) => {
@@ -100,11 +109,14 @@ ${params.map((p) => `${p.seriesName}: ${fmtK(p.value)}`).join('<br/>')}`
       xAxis: {
         type: 'category' as const,
         data: sessionRecords.map((_, i) => `#${i + 1}`),
-        axisLabel: { fontSize: 10 },
+        axisLabel: { fontSize: 10, color: axisLabelColor },
+        axisLine: { lineStyle: { color: axisLineColor } },
       },
       yAxis: {
         type: 'value' as const,
-        axisLabel: { fontSize: 10, formatter: (v: number) => fmtK(v) },
+        axisLabel: { fontSize: 10, formatter: (v: number) => fmtK(v), color: axisLabelColor },
+        axisLine: { lineStyle: { color: axisLineColor } },
+        splitLine: { lineStyle: { color: splitLineColor } },
       },
       series: [
         {
@@ -133,7 +145,7 @@ ${params.map((p) => `${p.seriesName}: ${fmtK(p.value)}`).join('<br/>')}`
         },
       ],
     }
-  }, [sessionRecords])
+  }, [sessionRecords, isDark, axisLabelColor, axisLineColor, splitLineColor])
 
   // Model breakdown pie
   const modelBreakdown = session?.modelBreakdown ?? []
@@ -143,6 +155,9 @@ ${params.map((p) => `${p.seriesName}: ${fmtK(p.value)}`).join('<br/>')}`
       tooltip: {
         trigger: 'item' as const,
         formatter: '{b}: {c}次 ({d}%)',
+        backgroundColor: isDark ? '#111827' : '#ffffff',
+        borderColor: isDark ? '#1e293b' : '#e2e8f0',
+        textStyle: { color: isDark ? '#c9d1d9' : '#1a202c' },
       },
       series: [
         {
@@ -154,11 +169,11 @@ ${params.map((p) => `${p.seriesName}: ${fmtK(p.value)}`).join('<br/>')}`
             value: b.count,
             itemStyle: { color: MODEL_COLORS[i % MODEL_COLORS.length] },
           })),
-          label: { fontSize: 10 },
+          label: { fontSize: 10, color: axisLabelColor },
         },
       ],
     }
-  }, [modelBreakdown])
+  }, [modelBreakdown, isDark, axisLabelColor])
 
   // Subagents
   const subagents = useMemo(

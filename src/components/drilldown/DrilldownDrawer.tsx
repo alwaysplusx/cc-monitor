@@ -49,7 +49,7 @@ export default function DrilldownDrawer({
         className={`fixed right-0 top-0 z-50 flex h-full flex-col border-l border-[var(--border)] bg-[var(--background)] shadow-2xl transition-transform duration-300 ease-in-out ${
           open ? 'translate-x-0' : 'translate-x-full'
         }`}
-        style={{ width }}
+        style={{ width, WebkitAppRegion: 'no-drag' } as React.CSSProperties}
       >
         {/* Header */}
         <div className="flex items-center justify-between border-b border-[var(--border)] px-4 py-3">

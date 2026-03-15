@@ -287,6 +287,25 @@ export default function MinuteTimeline() {
           start: defaultStartPct,
           end: 100,
           zoomLock: true,
+          borderColor: isDark ? '#1e293b' : '#d1d5db',
+          backgroundColor: isDark ? '#0f1420' : '#f9fafb',
+          fillerColor: isDark ? 'rgba(59,130,246,0.15)' : 'rgba(59,130,246,0.1)',
+          handleStyle: {
+            color: isDark ? '#1e293b' : '#e5e7eb',
+            borderColor: isDark ? '#334155' : '#9ca3af',
+          },
+          dataBackground: {
+            lineStyle: { color: isDark ? '#1e293b' : '#d1d5db' },
+            areaStyle: { color: isDark ? '#151d2e' : '#f1f5f9' },
+          },
+          selectedDataBackground: {
+            lineStyle: { color: isDark ? '#334155' : '#93c5fd' },
+            areaStyle: { color: isDark ? '#1e293b' : '#dbeafe' },
+          },
+          textStyle: {
+            color: isDark ? '#8892a8' : '#64748b',
+            fontSize: 10,
+          },
           labelFormatter: (_: number, value: string) => {
             if (timeView === 'hour') {
               // "YYYY-MM-DDTHH:mm" → "MM-DD HH:mm"
