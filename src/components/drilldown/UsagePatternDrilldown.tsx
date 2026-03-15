@@ -178,8 +178,8 @@ export default function UsagePatternDrilldown() {
         textStyle: { fontSize: 9 },
         inRange: {
           color: isDark
-            ? ['#0f172a', '#1e3a5f', '#2563eb', '#60a5fa', '#93c5fd']
-            : ['#eff6ff', '#dbeafe', '#93c5fd', '#3b82f6', '#1d4ed8'],
+            ? ['#0f172a', '#064e3b', '#059669', '#34d399', '#6ee7b7']
+            : ['#f0fdf4', '#dcfce7', '#86efac', '#22c55e', '#15803d'],
         },
       },
       series: [
