@@ -189,7 +189,7 @@ export default function UsagePatternDrilldown() {
           label: { show: false },
           itemStyle: {
             borderWidth: 1.5,
-            borderColor: isDark ? 'var(--background)' : '#ffffff',
+            borderColor: isDark ? '#1e293b' : '#ffffff',
             borderRadius: 2,
           },
           emphasis: {
