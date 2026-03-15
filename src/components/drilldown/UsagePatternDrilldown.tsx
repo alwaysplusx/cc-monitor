@@ -152,14 +152,18 @@ export default function UsagePatternDrilldown() {
       xAxis: {
         type: 'category' as const,
         data: HOURS,
-        splitArea: { show: true },
+        splitArea: { show: false },
+        splitLine: { show: false },
         axisLabel: { fontSize: 10 },
+        axisTick: { show: false },
       },
       yAxis: {
         type: 'category' as const,
         data: WEEKDAYS,
-        splitArea: { show: true },
+        splitArea: { show: false },
+        splitLine: { show: false },
         axisLabel: { fontSize: 10 },
+        axisTick: { show: false },
       },
       visualMap: {
         min: 0,
@@ -174,17 +178,33 @@ export default function UsagePatternDrilldown() {
         textStyle: { fontSize: 9 },
         inRange: {
           color: isDark
-            ? ['#1a1a2e', '#16213e', '#0f3460', '#3b82f6', '#60a5fa', '#93c5fd']
-            : ['#f0f4ff', '#dbeafe', '#bfdbfe', '#93c5fd', '#60a5fa', '#3b82f6'],
+            ? ['#1e293b', '#1e3a5f', '#2563eb', '#60a5fa', '#93c5fd']
+            : ['#eff6ff', '#dbeafe', '#93c5fd', '#3b82f6', '#1d4ed8'],
         },
       },
       series: [
         {
           type: 'heatmap',
           data,
-          label: { show: false },
+          label: {
+            show: true,
+            fontSize: 9,
+            formatter: (p: { value: [number, number, number] }) =>
+              p.value[2] > 0 ? `${p.value[2]}` : '',
+            color: isDark ? '#e2e8f0' : '#334155',
+          },
+          itemStyle: {
+            borderWidth: 1.5,
+            borderColor: isDark ? 'var(--background)' : '#ffffff',
+            borderRadius: 2,
+          },
           emphasis: {
-            itemStyle: { shadowBlur: 10, shadowColor: 'rgba(0, 0, 0, 0.5)' },
+            itemStyle: {
+              shadowBlur: 6,
+              shadowColor: 'rgba(0, 0, 0, 0.3)',
+              borderColor: isDark ? '#60a5fa' : '#3b82f6',
+              borderWidth: 2,
+            },
           },
         },
       ],
@@ -349,7 +369,7 @@ export default function UsagePatternDrilldown() {
         <h3 className="mb-2 text-xs font-medium text-[var(--muted-foreground)]">
           小时 x 星期 热力图
         </h3>
-        <ReactECharts option={heatmapOption} style={{ height: 220 }} />
+        <ReactECharts option={heatmapOption} style={{ height: 240 }} />
       </div>
 
       {/* Hourly request density */}
