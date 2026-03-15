@@ -107,9 +107,10 @@ export default function UsagePatternDrilldown() {
       legend: {
         data: models,
         top: 0,
+        type: 'scroll' as const,
         textStyle: { fontSize: 10 },
       },
-      grid: { top: 30, right: 12, bottom: 24, left: 36 },
+      grid: { top: 36, right: 12, bottom: 24, left: 36 },
       xAxis: {
         type: 'category' as const,
         data: HOURS,
@@ -244,7 +245,7 @@ export default function UsagePatternDrilldown() {
         <h3 className="mb-2 text-xs font-medium text-[var(--muted-foreground)]">
           每小时请求密度
         </h3>
-        <ReactECharts option={hourlyOption} style={{ height: 200 }} />
+        <ReactECharts option={hourlyOption} style={{ height: 220 }} />
       </div>
 
       {/* Daily active periods */}
