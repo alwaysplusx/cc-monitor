@@ -1,5 +1,5 @@
 // Electron main process entry point
-import { app, BrowserWindow, shell } from 'electron'
+import { app, BrowserWindow, ipcMain, shell } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import { registerIpcHandlers, getFileCache } from './ipc/handlers'
@@ -17,6 +17,9 @@ function createWindow(): BrowserWindow {
     minHeight: 600,
     show: false,
     title: 'CC Monitor',
+    icon: join(__dirname, '../../resources/icon.png'),
+    frame: false,
+    titleBarStyle: 'hidden',
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
       sandbox: false,
@@ -67,6 +70,15 @@ app.whenReady().then(() => {
   })
 
   registerIpcHandlers()
+
+  // Window control IPC handlers
+  ipcMain.on('window-minimize', () => BrowserWindow.getFocusedWindow()?.minimize())
+  ipcMain.on('window-maximize', () => {
+    const win = BrowserWindow.getFocusedWindow()
+    if (win) win.isMaximized() ? win.unmaximize() : win.maximize()
+  })
+  ipcMain.on('window-close', () => BrowserWindow.getFocusedWindow()?.close())
+
   const mainWindow = createWindow()
 
   // Start file watcher after window is ready

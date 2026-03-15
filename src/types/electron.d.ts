@@ -32,6 +32,9 @@ export interface ElectronAPI {
   saveSettings(settings: Partial<AppSettings>): Promise<void>
   onDataUpdated(callback: (projectPath: string) => void): () => void
   onWatchStatus(callback: (status: WatchStatus) => void): () => void
+  windowMinimize(): void
+  windowMaximize(): void
+  windowClose(): void
 }
 
 declare global {

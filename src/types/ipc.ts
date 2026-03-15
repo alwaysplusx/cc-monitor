@@ -3,6 +3,14 @@
 // Watch status reported from main process
 export type WatchStatus = 'watching' | 'stopped' | 'error'
 
+// Model pricing per million tokens (USD)
+export interface ModelPricingConfig {
+  match: string
+  input: number
+  output: number
+  cacheRead: number
+}
+
 // Application settings persisted to disk
 export interface AppSettings {
   claudeDataDir: string
@@ -13,6 +21,7 @@ export interface AppSettings {
   customTokenLimit: number
   minimizeToTray: boolean
   launchAtStartup: boolean
+  modelPricing: ModelPricingConfig[]
 }
 
 // IPC channel name constants (mirrored from electron/ipc/channels.ts)

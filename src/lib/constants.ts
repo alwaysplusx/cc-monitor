@@ -8,3 +8,24 @@ export const CHART_COLORS = {
 }
 
 export type TimeView = 'hour' | 'day' | 'month'
+
+// Model pricing lookup from settings config
+import type { ModelPricingConfig } from '../types/ipc'
+
+export interface ModelPricing {
+  input: number
+  output: number
+  cacheRead: number
+}
+
+const DEFAULT_PRICING: ModelPricing = { input: 3, output: 15, cacheRead: 0.3 }
+
+export function getModelPricing(model: string, pricingConfig: ModelPricingConfig[]): ModelPricing {
+  const lower = model.toLowerCase()
+  for (const tier of pricingConfig) {
+    if (lower.includes(tier.match.toLowerCase())) {
+      return { input: tier.input, output: tier.output, cacheRead: tier.cacheRead }
+    }
+  }
+  return DEFAULT_PRICING
+}

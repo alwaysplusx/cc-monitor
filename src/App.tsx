@@ -6,6 +6,7 @@ import MinuteTimeline from './components/charts/MinuteTimeline'
 import ModelPie from './components/charts/ModelPie'
 import ProjectPie from './components/charts/ProjectPie'
 import SessionTable from './components/tables/SessionTable'
+import SettingsModal from './components/layout/SettingsModal'
 import { useTokenData } from './hooks/useTokenData'
 import { useTheme } from './hooks/useTheme'
 
@@ -47,6 +48,7 @@ function App(): React.JSX.Element {
           <SessionTable />
         </div>
       </div>
+      <SettingsModal />
     </div>
   )
 }

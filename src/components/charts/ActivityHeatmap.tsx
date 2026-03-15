@@ -56,7 +56,7 @@ export default function ActivityHeatmap() {
       },
       calendar: {
         top: 8,
-        left: 30,
+        left: 35,
         right: 8,
         bottom: 4,
         cellSize: [11, 11],
@@ -71,12 +71,12 @@ export default function ActivityHeatmap() {
         monthLabel: {
           color: textColor,
           fontSize: 10,
-          nameMap: 'ZH',
+          nameMap: 'EN',
         },
         dayLabel: {
           color: textColor,
           fontSize: 9,
-          nameMap: 'ZH',
+          nameMap: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'],
           firstDay: 1,
         },
       },

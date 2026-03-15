@@ -23,6 +23,10 @@ const api = {
     ipcRenderer.on(IPC.WATCH_STATUS, handler)
     return () => ipcRenderer.removeListener(IPC.WATCH_STATUS, handler)
   },
+  // Window controls
+  windowMinimize: () => ipcRenderer.send('window-minimize'),
+  windowMaximize: () => ipcRenderer.send('window-maximize'),
+  windowClose: () => ipcRenderer.send('window-close'),
 }
 
 if (process.contextIsolated) {

@@ -287,6 +287,18 @@ export default function MinuteTimeline() {
           start: defaultStartPct,
           end: 100,
           zoomLock: true,
+          labelFormatter: (_: number, value: string) => {
+            if (timeView === 'hour') {
+              // "YYYY-MM-DDTHH:mm" → "MM-DD HH:mm"
+              return value.length >= 16 ? `${value.slice(5, 10)} ${value.slice(11, 16)}` : value
+            }
+            if (timeView === 'day') {
+              // "YYYY-MM-DD" → "MM-DD"
+              return value.length >= 10 ? value.slice(5, 10) : value
+            }
+            // "YYYY-MM" → keep as is
+            return value
+          },
         },
       ],
       series: [
@@ -319,7 +331,7 @@ export default function MinuteTimeline() {
           name: '缓存读取',
           type: 'bar',
           yAxisIndex: 1,
-          itemStyle: { color: CHART_COLORS.cacheRead, opacity: 0.25 },
+          itemStyle: { color: CHART_COLORS.cacheRead },
           barGap: '-100%',
           data: cacheData,
           z: 0,
