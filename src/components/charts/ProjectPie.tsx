@@ -6,10 +6,12 @@ import { useDataStore } from '../../stores/dataStore'
 import { useTheme } from '../../hooks/useTheme'
 import { echartsLightTheme, echartsDarkTheme } from '../../lib/theme'
 import { fmtK } from '../../lib/format'
+import { useCallback } from 'react'
 
 const PROJECT_COLORS = ['#3b82f6', '#8b5cf6', '#06b6d4', '#10b981', '#f59e0b', '#ef4444', '#ec4899', '#6366f1']
 
 interface ProjectUsage {
+  path: string
   name: string
   input: number
   output: number
@@ -20,6 +22,7 @@ interface ProjectUsage {
 
 export default function ProjectPie() {
   const tokenRecords = useDataStore((s) => s.tokenRecords)
+  const openDrilldown = useDataStore((s) => s.openDrilldown)
   const { isDark } = useTheme()
 
   const { chartProjects, allProjects, totalTokens } = useMemo(() => {
@@ -38,7 +41,7 @@ export default function ProjectPie() {
       .map(([path, e]) => {
         const t = e.input + e.output
         const name = path.split(/[/\\]/).pop() || path
-        return { name, input: e.input, output: e.output, cacheRead: e.cacheRead, total: t, percentage: total > 0 ? (t / total) * 100 : 0 }
+        return { path, name, input: e.input, output: e.output, cacheRead: e.cacheRead, total: t, percentage: total > 0 ? (t / total) * 100 : 0 }
       })
       .sort((a, b) => b.total - a.total)
 
@@ -48,6 +51,7 @@ export default function ProjectPie() {
     const chartProjects = [...chartMajor]
     if (chartMinor.length > 0) {
       chartProjects.push({
+        path: '',
         name: '其他',
         input: chartMinor.reduce((s, p) => s + p.input, 0),
         output: chartMinor.reduce((s, p) => s + p.output, 0),
@@ -121,6 +125,21 @@ export default function ProjectPie() {
     }
   }, [chartProjects, totalTokens, isDark])
 
+  const nameToPath = useMemo(() => {
+    const map = new Map<string, string>()
+    for (const p of allProjects) map.set(p.name, p.path)
+    return map
+  }, [allProjects])
+
+  const onChartClick = useCallback(
+    (params: { name: string }) => {
+      if (params.name === '其他') return
+      const path = nameToPath.get(params.name)
+      if (path) openDrilldown('project', { projectPath: path })
+    },
+    [openDrilldown, nameToPath],
+  )
+
   const hasData = allProjects.length > 0
 
   return (
@@ -129,11 +148,15 @@ export default function ProjectPie() {
 
       {hasData ? (
         <div className="flex min-h-0 flex-1 flex-col">
-          <ReactECharts option={option} style={{ height: 130 }} notMerge={false} />
+          <ReactECharts option={option} style={{ height: 130 }} notMerge={false} onEvents={{ click: onChartClick }} />
 
           <div className="mt-2 max-h-[88px] space-y-1.5 overflow-y-auto">
             {allProjects.map((p, i) => (
-              <div key={p.name} className="flex items-center gap-2 text-xs">
+              <div
+                key={p.name}
+                className="flex cursor-pointer items-center gap-2 rounded-sm px-1 text-xs transition-colors hover:bg-[var(--accent)]"
+                onClick={() => p.path && openDrilldown('project', { projectPath: p.path })}
+              >
                 <span
                   className="h-2.5 w-2.5 shrink-0 rounded-full"
                   style={{ backgroundColor: PROJECT_COLORS[i % PROJECT_COLORS.length] }}

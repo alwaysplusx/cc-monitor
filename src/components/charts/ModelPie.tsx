@@ -6,12 +6,21 @@ import { useDataStore } from '../../stores/dataStore'
 import { useTheme } from '../../hooks/useTheme'
 import { echartsLightTheme, echartsDarkTheme } from '../../lib/theme'
 import { fmtK } from '../../lib/format'
+import { useCallback } from 'react'
 
 const MODEL_COLORS = ['#3b82f6', '#8b5cf6', '#06b6d4', '#10b981', '#f59e0b', '#ef4444']
 
 export default function ModelPie() {
   const modelSummaries = useDataStore((s) => s.modelSummaries)
+  const openDrilldown = useDataStore((s) => s.openDrilldown)
   const { isDark } = useTheme()
+
+  const onChartClick = useCallback(
+    (params: { name: string }) => {
+      openDrilldown('model', { model: params.name })
+    },
+    [openDrilldown],
+  )
 
   const totalTokens = useMemo(
     () => modelSummaries.reduce((s, m) => s + m.totalInput + m.totalOutput, 0),
@@ -92,12 +101,17 @@ export default function ModelPie() {
             option={option}
             style={{ height: 130 }}
             notMerge={false}
+            onEvents={{ click: onChartClick }}
           />
 
           {/* Model detail list */}
           <div className="mt-2 max-h-[88px] space-y-1.5 overflow-y-auto">
             {modelSummaries.map((m, i) => (
-              <div key={m.model} className="flex items-center gap-2 text-xs">
+              <div
+                key={m.model}
+                className="flex cursor-pointer items-center gap-2 rounded-sm px-1 text-xs transition-colors hover:bg-[var(--accent)]"
+                onClick={() => openDrilldown('model', { model: m.model })}
+              >
                 <span
                   className="h-2.5 w-2.5 shrink-0 rounded-full"
                   style={{ backgroundColor: MODEL_COLORS[i % MODEL_COLORS.length] }}
