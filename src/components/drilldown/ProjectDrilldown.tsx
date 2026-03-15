@@ -3,6 +3,7 @@ import { useMemo } from 'react'
 import ReactECharts from 'echarts-for-react'
 import { useDataStore } from '../../stores/dataStore'
 import { useSettingsStore } from '../../stores/settingsStore'
+import { useTheme } from '../../hooks/useTheme'
 import { getModelPricing, CHART_COLORS } from '../../lib/constants'
 import { fmtK } from '../../lib/format'
 
@@ -13,6 +14,11 @@ export default function ProjectDrilldown({ projectPath }: { projectPath: string 
   const sessionSummaries = useDataStore((s) => s.sessionSummaries)
   const openDrilldown = useDataStore((s) => s.openDrilldown)
   const modelPricing = useSettingsStore((s) => s.modelPricing)
+  const { isDark } = useTheme()
+
+  const axisLabelColor = isDark ? '#8892a8' : '#64748b'
+  const splitLineColor = isDark ? '#151d2e' : '#f1f5f9'
+  const axisLineColor = isDark ? '#1e293b' : '#e2e8f0'
 
   const projectRecords = useMemo(
     () => records.filter((r) => r.projectPath === projectPath),
@@ -62,17 +68,25 @@ export default function ProjectDrilldown({ projectPath }: { projectPath: string 
     }
 
     return {
-      tooltip: { trigger: 'axis' as const },
-      legend: { data: ['输入', '输出', '缓存'], top: 0, textStyle: { fontSize: 10 } },
+      tooltip: {
+        trigger: 'axis' as const,
+        backgroundColor: isDark ? '#111827' : '#ffffff',
+        borderColor: isDark ? '#1e293b' : '#e2e8f0',
+        textStyle: { color: isDark ? '#c9d1d9' : '#1a202c' },
+      },
+      legend: { data: ['输入', '输出', '缓存'], top: 0, textStyle: { fontSize: 10, color: axisLabelColor } },
       grid: { top: 30, right: 12, bottom: 24, left: 44 },
       xAxis: {
         type: 'category' as const,
         data: days.map((d) => d.slice(5)),
-        axisLabel: { fontSize: 10 },
+        axisLabel: { fontSize: 10, color: axisLabelColor },
+        axisLine: { lineStyle: { color: axisLineColor } },
       },
       yAxis: {
         type: 'value' as const,
-        axisLabel: { fontSize: 10, formatter: (v: number) => fmtK(v) },
+        axisLabel: { fontSize: 10, formatter: (v: number) => fmtK(v), color: axisLabelColor },
+        axisLine: { lineStyle: { color: axisLineColor } },
+        splitLine: { lineStyle: { color: splitLineColor } },
       },
       series: [
         {
@@ -107,7 +121,7 @@ export default function ProjectDrilldown({ projectPath }: { projectPath: string 
         },
       ],
     }
-  }, [projectRecords])
+  }, [projectRecords, isDark, axisLabelColor, axisLineColor, splitLineColor])
 
   // Model distribution
   const modelDist = useMemo(() => {
@@ -126,6 +140,9 @@ export default function ProjectDrilldown({ projectPath }: { projectPath: string 
     return {
       tooltip: {
         trigger: 'item' as const,
+        backgroundColor: isDark ? '#111827' : '#ffffff',
+        borderColor: isDark ? '#1e293b' : '#e2e8f0',
+        textStyle: { color: isDark ? '#c9d1d9' : '#1a202c' },
         formatter: (params: { name: string; value: number; percent: number }) =>
           `${params.name}<br/>${fmtK(params.value)} (${params.percent.toFixed(1)}%)`,
       },
@@ -139,11 +156,11 @@ export default function ProjectDrilldown({ projectPath }: { projectPath: string 
             value: m.tokens,
             itemStyle: { color: MODEL_COLORS[i % MODEL_COLORS.length] },
           })),
-          label: { fontSize: 10 },
+          label: { fontSize: 10, color: axisLabelColor },
         },
       ],
     }
-  }, [modelDist])
+  }, [modelDist, isDark, axisLabelColor])
 
   // Cost by model
   const costByModel = useMemo(() => {

@@ -158,6 +158,7 @@ ${params.map((p) => `${p.seriesName}: ${fmtK(p.value)}`).join('<br/>')}`
         backgroundColor: isDark ? '#111827' : '#ffffff',
         borderColor: isDark ? '#1e293b' : '#e2e8f0',
         textStyle: { color: isDark ? '#c9d1d9' : '#1a202c' },
+        position: 'right',
       },
       series: [
         {

@@ -7,7 +7,7 @@ export const CHART_COLORS = {
   green: '#10b981',
 }
 
-export type TimeView = 'hour' | 'day' | 'month'
+export type TimeView = 'minute' | 'hour' | 'day' | 'month'
 
 // Model pricing lookup from settings config
 import type { ModelPricingConfig } from '../types/ipc'

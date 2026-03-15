@@ -2,6 +2,7 @@
 import { useMemo } from 'react'
 import ReactECharts from 'echarts-for-react'
 import { useDataStore } from '../../stores/dataStore'
+import { useTheme } from '../../hooks/useTheme'
 import { CHART_COLORS } from '../../lib/constants'
 import { fmtK } from '../../lib/format'
 
@@ -15,6 +16,11 @@ export default function ModelDrilldown({ model }: { model: string }) {
   const records = useDataStore((s) => s.tokenRecords)
   const sessionSummaries = useDataStore((s) => s.sessionSummaries)
   const openDrilldown = useDataStore((s) => s.openDrilldown)
+  const { isDark } = useTheme()
+
+  const axisLabelColor = isDark ? '#8892a8' : '#64748b'
+  const splitLineColor = isDark ? '#151d2e' : '#f1f5f9'
+  const axisLineColor = isDark ? '#1e293b' : '#e2e8f0'
 
   const modelRecords = useMemo(
     () => records.filter((r) => r.model === model),
@@ -58,17 +64,25 @@ export default function ModelDrilldown({ model }: { model: string }) {
     }
 
     return {
-      tooltip: { trigger: 'axis' as const },
-      legend: { data: [model, '其他模型'], top: 0, textStyle: { fontSize: 10 } },
+      tooltip: {
+        trigger: 'axis' as const,
+        backgroundColor: isDark ? '#111827' : '#ffffff',
+        borderColor: isDark ? '#1e293b' : '#e2e8f0',
+        textStyle: { color: isDark ? '#c9d1d9' : '#1a202c' },
+      },
+      legend: { data: [model, '其他模型'], top: 0, textStyle: { fontSize: 10, color: axisLabelColor } },
       grid: { top: 30, right: 12, bottom: 24, left: 44 },
       xAxis: {
         type: 'category' as const,
         data: days.map((d) => d.slice(5)),
-        axisLabel: { fontSize: 10 },
+        axisLabel: { fontSize: 10, color: axisLabelColor },
+        axisLine: { lineStyle: { color: axisLineColor } },
       },
       yAxis: {
         type: 'value' as const,
-        axisLabel: { fontSize: 10, formatter: (v: number) => fmtK(v) },
+        axisLabel: { fontSize: 10, formatter: (v: number) => fmtK(v), color: axisLabelColor },
+        axisLine: { lineStyle: { color: axisLineColor } },
+        splitLine: { lineStyle: { color: splitLineColor } },
       },
       series: [
         {
@@ -90,7 +104,7 @@ export default function ModelDrilldown({ model }: { model: string }) {
         },
       ],
     }
-  }, [allRecords, model])
+  }, [allRecords, model, isDark, axisLabelColor, axisLineColor, splitLineColor])
 
   // Project distribution
   const projectDist = useMemo(() => {
@@ -110,16 +124,22 @@ export default function ModelDrilldown({ model }: { model: string }) {
       tooltip: {
         trigger: 'axis' as const,
         axisPointer: { type: 'shadow' as const },
+        backgroundColor: isDark ? '#111827' : '#ffffff',
+        borderColor: isDark ? '#1e293b' : '#e2e8f0',
+        textStyle: { color: isDark ? '#c9d1d9' : '#1a202c' },
       },
       grid: { top: 8, right: 12, bottom: 4, left: 80, containLabel: false },
       xAxis: {
         type: 'value' as const,
-        axisLabel: { fontSize: 10, formatter: (v: number) => fmtK(v) },
+        axisLabel: { fontSize: 10, formatter: (v: number) => fmtK(v), color: axisLabelColor },
+        axisLine: { lineStyle: { color: axisLineColor } },
+        splitLine: { lineStyle: { color: splitLineColor } },
       },
       yAxis: {
         type: 'category' as const,
         data: projectDist.map((p) => p.name).reverse(),
-        axisLabel: { fontSize: 10, width: 70, overflow: 'truncate' as const },
+        axisLabel: { fontSize: 10, width: 70, overflow: 'truncate' as const, color: axisLabelColor },
+        axisLine: { lineStyle: { color: axisLineColor } },
       },
       series: [
         {
@@ -131,7 +151,7 @@ export default function ModelDrilldown({ model }: { model: string }) {
         },
       ],
     }
-  }, [projectDist])
+  }, [projectDist, isDark, axisLabelColor, axisLineColor, splitLineColor])
 
   // Efficiency metrics
   const avgInput = modelRecords.length > 0 ? Math.round(totalInput / modelRecords.length) : 0

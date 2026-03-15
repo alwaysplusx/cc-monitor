@@ -45,6 +45,7 @@ interface StatCardProps {
   subtextNode?: React.ReactNode
   rightNode?: React.ReactNode
   rightHoverTooltip?: React.ReactNode
+  bgNode?: React.ReactNode
   color: string
   sparkColor?: string
   sparkData?: number[]
@@ -53,7 +54,7 @@ interface StatCardProps {
   onClick?: () => void
 }
 
-function StatCard({ label, value, subtext, subtextNode, rightNode, rightHoverTooltip, color, sparkColor, sparkData, tooltip, tooltipAlign = 'right', onClick }: StatCardProps) {
+function StatCard({ label, value, subtext, subtextNode, rightNode, rightHoverTooltip, bgNode, color, sparkColor, sparkData, tooltip, tooltipAlign = 'right', onClick }: StatCardProps) {
   return (
     <div
       className={cn(
@@ -63,6 +64,7 @@ function StatCard({ label, value, subtext, subtextNode, rightNode, rightHoverToo
       onClick={onClick}
     >
       {sparkData && sparkColor && <Sparkline data={sparkData} color={sparkColor} />}
+      {bgNode}
       {rightNode && (
         <div className="group/ring absolute -right-px -top-px z-10">
           <div className="overflow-hidden rounded-tr-lg opacity-35 transition-opacity group-hover/ring:opacity-70">{rightNode}</div>
@@ -110,6 +112,68 @@ function ColoredToken({ value, color }: { value: number; color: string }) {
       <span className="font-semibold">{num}</span>
       {unit && <span className="text-[10px] opacity-60">{unit}</span>}
     </span>
+  )
+}
+
+/** Mini 24-hour density heatmap overlay */
+function HourDensity({ data }: { data: number[] }) {
+  const max = Math.max(...data, 1)
+  return (
+    <div className="absolute inset-x-0 bottom-0 z-20 flex items-end overflow-hidden rounded-b-lg opacity-25 hover:opacity-60 transition-opacity" style={{ height: '66%' }}>
+      {data.map((v, i) => (
+        <div
+          key={i}
+          className="flex-1"
+          title={`${i.toString().padStart(2, '0')}:00 - ${(i + 1).toString().padStart(2, '0')}:00  ${v}次`}
+          style={{
+            height: v > 0 ? `${Math.max(15, (v / max) * 100)}%` : '10%',
+            backgroundColor: v > 0 ? '#10b981' : 'var(--muted-foreground)',
+            opacity: v > 0 ? 0.3 + (v / max) * 0.7 : 0.15,
+          }}
+        />
+      ))}
+    </div>
+  )
+}
+
+/** Mini 24-day daily active hours overlay */
+function DailyActiveHours({ records }: { records: { timestamp: Date }[] }) {
+  const data = useMemo(() => {
+    const today = new Date()
+    const days: { label: string; hours: number }[] = []
+    for (let i = 23; i >= 0; i--) {
+      const d = new Date(today)
+      d.setDate(d.getDate() - i)
+      const dayStr = d.toISOString().slice(0, 10)
+      const dayLabel = d.toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit' })
+      const dayRecords = records.filter((r) => r.timestamp.toISOString().slice(0, 10) === dayStr)
+      let hours = 0
+      if (dayRecords.length > 1) {
+        const times = dayRecords.map((r) => r.timestamp.getTime())
+        hours = (Math.max(...times) - Math.min(...times)) / (1000 * 60 * 60)
+      }
+      days.push({ label: dayLabel, hours: Math.round(hours * 10) / 10 })
+    }
+    return days
+  }, [records])
+
+  const max = Math.max(...data.map((d) => d.hours), 1)
+
+  return (
+    <div className="absolute inset-x-0 bottom-0 z-20 flex items-end overflow-hidden rounded-b-lg opacity-25 hover:opacity-60 transition-opacity" style={{ height: '66%' }}>
+      {data.map((d, i) => (
+        <div
+          key={i}
+          className="flex-1"
+          title={`${d.label}  ${d.hours > 0 ? `${d.hours}h` : '无活动'}`}
+          style={{
+            height: d.hours > 0 ? `${Math.max(15, (d.hours / max) * 100)}%` : '10%',
+            backgroundColor: d.hours > 0 ? '#f59e0b' : 'var(--muted-foreground)',
+            opacity: d.hours > 0 ? 0.3 + (d.hours / max) * 0.7 : 0.15,
+          }}
+        />
+      ))}
+    </div>
   )
 }
 
@@ -249,6 +313,15 @@ export default function StatsBar() {
   const yesterdayTotal = recentDays[0].total
   const yesterdayRequests = recentDays[0].requests
 
+  // Hourly request density (24 hours)
+  const hourDensity = useMemo(() => {
+    const hours = new Array(24).fill(0)
+    for (const r of records) {
+      hours[r.timestamp.getHours()]++
+    }
+    return hours
+  }, [records])
+
   // Calculate active duration: from first to last record timestamp
   const timestamps = records.map((r) => r.timestamp.getTime()).filter((t) => t > 0)
   const activeDurationMs =
@@ -328,6 +401,7 @@ export default function StatsBar() {
       <StatCard
         label="请求次数"
         value={fmtK(requestCount)}
+        bgNode={<HourDensity data={hourDensity} />}
         subtextNode={
           <div className="flex items-baseline gap-x-2 text-xs">
             <span className="whitespace-nowrap text-[var(--muted-foreground)]">
@@ -406,6 +480,7 @@ export default function StatsBar() {
       <StatCard
         label="活跃时长"
         value={fmtDuration(activeDurationMs)}
+        bgNode={<DailyActiveHours records={records} />}
         subtext={timestamps.length > 0
           ? (() => {
               const minDate = new Date(Math.min(...timestamps))

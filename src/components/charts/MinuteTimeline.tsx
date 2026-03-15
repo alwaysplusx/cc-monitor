@@ -23,6 +23,7 @@ export default function MinuteTimeline() {
   const chartRef = useRef<ReactECharts>(null)
 
   const tabs: { key: TimeView; label: string }[] = [
+    { key: 'minute', label: '分钟' },
     { key: 'hour', label: '小时' },
     { key: 'day', label: '天' },
     { key: 'month', label: '月' },
@@ -50,12 +51,47 @@ export default function MinuteTimeline() {
     }
     for (const r of tokenRecords) {
       const d = r.timestamp
-      // Add to all three granularities
+      // Add to all granularities
+      addToMb(fmtSlotKey(d), r.model, r.inputTokens, r.outputTokens)
       const slotMin = d.getMinutes() < 30 ? '00' : '30'
-      const slotKey = `${d.getFullYear()}-${p2(d.getMonth() + 1)}-${p2(d.getDate())}T${p2(d.getHours())}:${slotMin}`
-      addToMb(slotKey, r.model, r.inputTokens, r.outputTokens)
+      const halfHourKey = `${d.getFullYear()}-${p2(d.getMonth() + 1)}-${p2(d.getDate())}T${p2(d.getHours())}:${slotMin}`
+      addToMb(halfHourKey, r.model, r.inputTokens, r.outputTokens)
       addToMb(fmtDayKey(d), r.model, r.inputTokens, r.outputTokens)
       addToMb(fmtMonthKey(d), r.model, r.inputTokens, r.outputTokens)
+    }
+
+    if (timeView === 'minute') {
+      // Per-minute view, range = 4h (4x default 1h), slider = 25%
+      const now = new Date()
+      const minMap = new Map<string, { input: number; output: number; cache: number }>()
+      for (const b of minuteBuckets) {
+        minMap.set(b.minute, { input: b.input, output: b.output, cache: b.cacheRead })
+      }
+
+      if (minMap.size === 0) {
+        return { xData: [] as string[], inputData: [] as number[], outputData: [] as number[], cacheData: [] as number[], defaultStartPct: 0 }
+      }
+
+      const cursor = new Date(now)
+      cursor.setMinutes(cursor.getMinutes() - 4 * 60)
+      cursor.setSeconds(0, 0)
+
+      const slots: Array<{ key: string; input: number; output: number; cache: number }> = []
+      while (cursor <= now) {
+        const key = fmtSlotKey(cursor)
+        const data = minMap.get(key) ?? { input: 0, output: 0, cache: 0 }
+        slots.push({ key, ...data })
+        cursor.setMinutes(cursor.getMinutes() + 1)
+      }
+
+      return {
+        xData: slots.map((s) => s.key),
+        inputData: slots.map((s) => s.input),
+        outputData: slots.map((s) => s.output),
+        cacheData: slots.map((s) => s.cache),
+        defaultStartPct: 75,
+        modelBreakdownMap: mbMap,
+      }
     }
 
     if (timeView === 'hour') {
@@ -239,8 +275,8 @@ export default function MinuteTimeline() {
           fontSize: 10,
           rotate: 0,
           formatter: (v: string) => {
-            if (timeView === 'hour') {
-              // 30-min slots: "HH:mm"
+            if (timeView === 'minute' || timeView === 'hour') {
+              // "YYYY-MM-DDTHH:mm" → "HH:mm"
               return v.length >= 16 ? v.slice(11, 16) : v
             }
             if (timeView === 'day') {
@@ -251,6 +287,11 @@ export default function MinuteTimeline() {
             return v
           },
           interval: (_index: number) => {
+            if (timeView === 'minute') {
+              // Per-minute: show label every 10 minutes
+              const step = 10
+              return _index % step === 0 || _index === xData.length - 1
+            }
             if (timeView === 'hour' || timeView === 'day') {
               return true
             }
@@ -307,7 +348,7 @@ export default function MinuteTimeline() {
             fontSize: 10,
           },
           labelFormatter: (_: number, value: string) => {
-            if (timeView === 'hour') {
+            if (timeView === 'minute' || timeView === 'hour') {
               // "YYYY-MM-DDTHH:mm" → "MM-DD HH:mm"
               return value.length >= 16 ? `${value.slice(5, 10)} ${value.slice(11, 16)}` : value
             }
