@@ -212,7 +212,7 @@ export default function ModelDrilldown({ model }: { model: string }) {
               <div
                 key={s.id}
                 onClick={() => openDrilldown('session', { sessionId: s.sessionId })}
-                className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-xs transition-colors hover:bg-[var(--muted)]"
+                className="group/row flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-xs transition-colors hover:bg-[var(--muted)]"
               >
                 <span className="w-4 shrink-0 text-right font-mono text-[var(--muted-foreground)]">
                   {i + 1}
@@ -221,6 +221,7 @@ export default function ModelDrilldown({ model }: { model: string }) {
                 <span className="shrink-0 font-mono text-[var(--muted-foreground)]">
                   {fmtK(s.totalInput + s.totalOutput)}
                 </span>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="shrink-0 text-[var(--muted-foreground)] opacity-0 transition-opacity group-hover/row:opacity-100"><path d="m9 18 6-6-6-6" /></svg>
               </div>
             ))}
           </div>

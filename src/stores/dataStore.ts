@@ -42,6 +42,7 @@ interface DataState {
   modelSwitches: ModelSwitch[]
   // Drilldown state
   drilldown: DrilldownState | null
+  drilldownHistory: DrilldownState[]
 
   // View state
   timeView: TimeView
@@ -62,6 +63,7 @@ interface DataState {
     modelSwitches: ModelSwitch[]
   }) => void
   openDrilldown: (type: DrilldownType, params?: DrilldownState['params']) => void
+  goBackDrilldown: () => void
   closeDrilldown: () => void
   setTimeView: (view: TimeView) => void
   setHighlightedTimeRange: (range: { start: string; end: string } | null) => void
@@ -80,6 +82,7 @@ export const useDataStore = create<DataState>((set) => ({
   sessionSummaries: [],
   modelSwitches: [],
   drilldown: null,
+  drilldownHistory: [],
   timeView: 'hour',
   lastUpdated: null,
   highlightedTimeRange: null,
@@ -101,9 +104,22 @@ export const useDataStore = create<DataState>((set) => ({
       lastUpdated: new Date(),
     }),
 
-  openDrilldown: (type, params = {}) => set({ drilldown: { type, params } }),
+  openDrilldown: (type, params = {}) =>
+    set((state) => ({
+      drilldownHistory: state.drilldown
+        ? [...state.drilldownHistory, state.drilldown]
+        : state.drilldownHistory,
+      drilldown: { type, params },
+    })),
 
-  closeDrilldown: () => set({ drilldown: null }),
+  goBackDrilldown: () =>
+    set((state) => {
+      const history = [...state.drilldownHistory]
+      const prev = history.pop() ?? null
+      return { drilldown: prev, drilldownHistory: history }
+    }),
+
+  closeDrilldown: () => set({ drilldown: null, drilldownHistory: [] }),
 
   setTimeView: (view) => set({ timeView: view }),
 

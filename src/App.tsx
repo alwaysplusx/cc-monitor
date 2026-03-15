@@ -29,7 +29,9 @@ function App(): React.JSX.Element {
   useTokenData()
   useTheme()
   const drilldown = useDataStore((s) => s.drilldown)
+  const drilldownHistory = useDataStore((s) => s.drilldownHistory)
   const closeDrilldown = useDataStore((s) => s.closeDrilldown)
+  const goBackDrilldown = useDataStore((s) => s.goBackDrilldown)
 
   return (
     <div className="flex h-screen flex-col bg-[var(--background)] text-[var(--foreground)]">
@@ -69,6 +71,8 @@ function App(): React.JSX.Element {
       <DrilldownDrawer
         open={drilldown !== null}
         onClose={closeDrilldown}
+        onBack={goBackDrilldown}
+        canGoBack={drilldownHistory.length > 0}
         title={drilldown ? drilldownTitles[drilldown.type] : ''}
       >
         {drilldown?.type === 'cost' && <CostDrilldown />}
