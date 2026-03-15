@@ -1,5 +1,5 @@
 // Usage pattern drilldown — hour x weekday heatmap, hourly density, daily active periods
-import { useMemo } from 'react'
+import { useMemo, useRef, useCallback } from 'react'
 import ReactECharts from 'echarts-for-react'
 import { useDataStore } from '../../stores/dataStore'
 import { useTheme } from '../../hooks/useTheme'
@@ -8,6 +8,57 @@ const WEEKDAYS = ['周一', '周二', '周三', '周四', '周五', '周六', '�
 const HOURS = Array.from({ length: 24 }, (_, i) => `${i}`)
 
 const MODEL_COLORS = ['#3b82f6', '#8b5cf6', '#06b6d4', '#10b981', '#f59e0b', '#ef4444']
+
+/** Horizontally draggable legend strip */
+function DragScrollLegend({ models }: { models: string[] }) {
+  const ref = useRef<HTMLDivElement>(null)
+  const dragging = useRef(false)
+  const startX = useRef(0)
+  const scrollLeft = useRef(0)
+
+  const onMouseDown = useCallback((e: React.MouseEvent) => {
+    dragging.current = true
+    startX.current = e.clientX
+    scrollLeft.current = ref.current?.scrollLeft ?? 0
+    ref.current!.style.cursor = 'grabbing'
+  }, [])
+
+  const onMouseMove = useCallback((e: React.MouseEvent) => {
+    if (!dragging.current) return
+    e.preventDefault()
+    const dx = e.clientX - startX.current
+    ref.current!.scrollLeft = scrollLeft.current - dx
+  }, [])
+
+  const onMouseUp = useCallback(() => {
+    dragging.current = false
+    if (ref.current) ref.current.style.cursor = 'grab'
+  }, [])
+
+  return (
+    <div
+      ref={ref}
+      className="mb-1 cursor-grab select-none overflow-x-auto"
+      style={{ scrollbarWidth: 'none' }}
+      onMouseDown={onMouseDown}
+      onMouseMove={onMouseMove}
+      onMouseUp={onMouseUp}
+      onMouseLeave={onMouseUp}
+    >
+      <div className="flex w-max items-center gap-3 px-1 py-1">
+        {models.map((model, i) => (
+          <div key={model} className="flex shrink-0 items-center gap-1 text-[10px] text-[var(--foreground)]">
+            <span
+              className="inline-block h-2.5 w-2.5 shrink-0 rounded-sm"
+              style={{ backgroundColor: MODEL_COLORS[i % MODEL_COLORS.length] }}
+            />
+            <span className="whitespace-nowrap">{model}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
 
 export default function UsagePatternDrilldown() {
   const records = useDataStore((s) => s.tokenRecords)
@@ -242,22 +293,7 @@ export default function UsagePatternDrilldown() {
           每小时请求密度
         </h3>
         {/* Draggable scrolling legend */}
-        <div
-          className="mb-1 cursor-grab overflow-x-auto active:cursor-grabbing"
-          style={{ scrollbarWidth: 'none' }}
-        >
-          <div className="flex w-max items-center gap-3 px-1 py-1">
-            {hourlyModels.map((model, i) => (
-              <div key={model} className="flex shrink-0 items-center gap-1 text-[10px] text-[var(--foreground)]">
-                <span
-                  className="inline-block h-2.5 w-2.5 shrink-0 rounded-sm"
-                  style={{ backgroundColor: MODEL_COLORS[i % MODEL_COLORS.length] }}
-                />
-                <span className="whitespace-nowrap">{model}</span>
-              </div>
-            ))}
-          </div>
-        </div>
+        <DragScrollLegend models={hourlyModels} />
         <ReactECharts option={hourlyOption} style={{ height: 200 }} />
       </div>
 
