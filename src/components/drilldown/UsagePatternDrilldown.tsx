@@ -87,10 +87,11 @@ export default function UsagePatternDrilldown() {
   }, [records, isDark])
 
   // Hourly request density (24 bars, stacked by model)
+  const hourlyModels = useMemo(() => [...new Set(records.map((r) => r.model))], [records])
+
   const hourlyOption = useMemo(() => {
-    const models = [...new Set(records.map((r) => r.model))]
     const modelHours = new Map<string, number[]>()
-    for (const m of models) {
+    for (const m of hourlyModels) {
       modelHours.set(m, Array(24).fill(0) as number[])
     }
 
@@ -104,13 +105,8 @@ export default function UsagePatternDrilldown() {
         trigger: 'axis' as const,
         axisPointer: { type: 'shadow' as const },
       },
-      legend: {
-        data: models,
-        top: 0,
-        type: 'scroll' as const,
-        textStyle: { fontSize: 10 },
-      },
-      grid: { top: 36, right: 12, bottom: 24, left: 36 },
+      legend: { show: false },
+      grid: { top: 12, right: 12, bottom: 24, left: 36 },
       xAxis: {
         type: 'category' as const,
         data: HOURS,
@@ -120,7 +116,7 @@ export default function UsagePatternDrilldown() {
         type: 'value' as const,
         axisLabel: { fontSize: 10 },
       },
-      series: models.map((model, i) => ({
+      series: hourlyModels.map((model, i) => ({
         name: model,
         type: 'bar',
         stack: 'total',
@@ -128,7 +124,7 @@ export default function UsagePatternDrilldown() {
         itemStyle: { color: MODEL_COLORS[i % MODEL_COLORS.length] },
       })),
     }
-  }, [records])
+  }, [records, hourlyModels])
 
   // Daily active periods (Gantt-style): last 7 days
   const ganttOption = useMemo(() => {
@@ -245,7 +241,24 @@ export default function UsagePatternDrilldown() {
         <h3 className="mb-2 text-xs font-medium text-[var(--muted-foreground)]">
           每小时请求密度
         </h3>
-        <ReactECharts option={hourlyOption} style={{ height: 220 }} />
+        {/* Draggable scrolling legend */}
+        <div
+          className="mb-1 cursor-grab overflow-x-auto active:cursor-grabbing"
+          style={{ scrollbarWidth: 'none' }}
+        >
+          <div className="flex w-max items-center gap-3 px-1 py-1">
+            {hourlyModels.map((model, i) => (
+              <div key={model} className="flex shrink-0 items-center gap-1 text-[10px] text-[var(--foreground)]">
+                <span
+                  className="inline-block h-2.5 w-2.5 shrink-0 rounded-sm"
+                  style={{ backgroundColor: MODEL_COLORS[i % MODEL_COLORS.length] }}
+                />
+                <span className="whitespace-nowrap">{model}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+        <ReactECharts option={hourlyOption} style={{ height: 200 }} />
       </div>
 
       {/* Daily active periods */}
