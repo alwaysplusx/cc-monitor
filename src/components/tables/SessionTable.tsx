@@ -80,6 +80,20 @@ function ModelCell({ breakdown, total }: { breakdown: { model: string; count: nu
   )
 }
 
+/** Format duration between two dates as human-readable string */
+function formatDuration(start: Date, end: Date): string {
+  const ms = end.getTime() - start.getTime()
+  if (ms < 0) return '0s'
+  const s = Math.floor(ms / 1000)
+  if (s < 60) return `${s}s`
+  const m = Math.floor(s / 60)
+  if (m < 60) return `${m}m${s % 60 > 0 ? ` ${s % 60}s` : ''}`
+  const h = Math.floor(m / 60)
+  if (h < 24) return `${h}h${m % 60 > 0 ? ` ${m % 60}m` : ''}`
+  const d = Math.floor(h / 24)
+  return `${d}d${h % 24 > 0 ? ` ${h % 24}h` : ''}`
+}
+
 /** Decode encoded project folder name: C--Users-wuxii-workspaces-foo → foo */
 function projectDisplayName(projectPath: string): string {
   const last = projectPath.split(/[/\\]/).pop() || projectPath
@@ -163,7 +177,7 @@ export default function SessionTable() {
                 <th className={cn(thCls, 'text-right text-cyan-500')}>缓存</th>
                 <th className={thCls}>模型</th>
                 <th className={thCls}>开始</th>
-                <th className={thCls}>结束</th>
+                <th className={thCls}>时长</th>
               </tr>
             </thead>
             <tbody>
@@ -241,7 +255,7 @@ export default function SessionTable() {
                         {formatDateTime(session.firstTimestamp)}
                       </td>
                       <td className={cn(tdCls, 'text-[var(--muted-foreground)]')}>
-                        {formatDateTime(session.lastTimestamp)}
+                        {formatDuration(session.firstTimestamp, session.lastTimestamp)}
                       </td>
                     </tr>
 
@@ -280,7 +294,7 @@ export default function SessionTable() {
                             {formatDateTime(sub.firstTimestamp)}
                           </td>
                           <td className={cn(tdCls, 'text-[var(--muted-foreground)]')}>
-                            {formatDateTime(sub.lastTimestamp)}
+                            {formatDuration(sub.firstTimestamp, sub.lastTimestamp)}
                           </td>
                         </tr>
                       ))}

@@ -50,7 +50,7 @@ export default function Header() {
     <header className="flex h-10 select-none items-center border-b border-[var(--border)] bg-[var(--card)]" style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}>
       {/* Left: Logo + Title */}
       <div className="flex items-center gap-2 pl-3">
-        <img src="/icon.png" alt="CC Monitor" className="h-6 w-6 rounded" />
+        <Monitor className="h-5 w-5 text-[var(--primary)]" />
         <span className="text-xs font-semibold text-[var(--foreground)]">CC Monitor</span>
       </div>
 

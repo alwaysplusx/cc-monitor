@@ -17,7 +17,6 @@ function createWindow(): BrowserWindow {
     minHeight: 600,
     show: false,
     title: 'CC Monitor',
-    icon: join(__dirname, '../../resources/icon.png'),
     frame: false,
     titleBarStyle: 'hidden',
     webPreferences: {

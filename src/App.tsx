@@ -23,11 +23,11 @@ function App(): React.JSX.Element {
       <div className="flex-1 overflow-auto px-4 pb-4">
         <div className="grid grid-cols-1 gap-3 lg:grid-cols-[1fr_320px]">
           {/* Left: Heatmap + Chart */}
-          <div className="grid grid-rows-[auto_1fr] gap-3">
-            <div className="rounded-lg border border-[var(--border)] bg-[var(--card)] p-3">
+          <div className="grid min-w-0 grid-rows-[auto_1fr] gap-3">
+            <div className="min-w-0 overflow-hidden rounded-lg border border-[var(--border)] bg-[var(--card)] p-3">
               <ActivityHeatmap />
             </div>
-            <div className="rounded-lg border border-[var(--border)] bg-[var(--card)] p-3">
+            <div className="min-w-0 overflow-hidden rounded-lg border border-[var(--border)] bg-[var(--card)] p-3">
               <MinuteTimeline />
             </div>
           </div>
