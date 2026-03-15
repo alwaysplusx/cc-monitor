@@ -4,6 +4,7 @@ import ReactECharts from 'echarts-for-react'
 import { useDataStore } from '../../stores/dataStore'
 import { useSettingsStore } from '../../stores/settingsStore'
 import { getModelPricing, CHART_COLORS } from '../../lib/constants'
+import { useTheme } from '../../hooks/useTheme'
 import type { TokenRecord, SessionSummary } from '../../types/data'
 
 type DateRange = '7d' | '14d' | '30d'
@@ -36,7 +37,9 @@ export default function CostDrilldown() {
   const sessionSummaries = useDataStore((s) => s.sessionSummaries)
   const openDrilldown = useDataStore((s) => s.openDrilldown)
   const modelPricing = useSettingsStore((s) => s.modelPricing)
+  const { isDark } = useTheme()
   const [dateRange, setDateRange] = useState<DateRange>('14d')
+  const splitLineColor = isDark ? '#1e293b' : '#e2e8f0'
 
   const cost = useMemo(() => calcCost(records, modelPricing), [records, modelPricing])
 
@@ -170,10 +173,11 @@ export default function CostDrilldown() {
       },
       legend: { data: ['输入', '输出', '缓存'], top: 0, textStyle: { fontSize: 11 } },
       grid: { top: 30, right: 12, bottom: 24, left: 44 },
-      xAxis: { type: 'category' as const, data: dailyTrend.dates, axisLabel: { fontSize: 10 } },
+      xAxis: { type: 'category' as const, data: dailyTrend.dates, axisLabel: { fontSize: 10 }, splitLine: { show: false } },
       yAxis: {
         type: 'value' as const,
         axisLabel: { fontSize: 10, formatter: (v: number) => `$${v}` },
+        splitLine: { lineStyle: { color: splitLineColor } },
       },
       series: [
         {
@@ -205,7 +209,7 @@ export default function CostDrilldown() {
         },
       ],
     }),
-    [dailyTrend],
+    [dailyTrend, splitLineColor],
   )
 
   const projectBarOption = useMemo(
@@ -226,11 +230,13 @@ export default function CostDrilldown() {
       xAxis: {
         type: 'value' as const,
         axisLabel: { fontSize: 10, formatter: (v: number) => `$${v}` },
+        splitLine: { lineStyle: { color: splitLineColor } },
       },
       yAxis: {
         type: 'category' as const,
         data: projectRanking.map((p) => p.name).reverse(),
         axisLabel: { fontSize: 10, width: 70, overflow: 'truncate' as const },
+        splitLine: { show: false },
       },
       series: [
         {
@@ -256,7 +262,7 @@ export default function CostDrilldown() {
         },
       ],
     }),
-    [projectRanking],
+    [projectRanking, splitLineColor],
   )
 
   const modelBarOption = useMemo(
@@ -277,11 +283,13 @@ export default function CostDrilldown() {
       xAxis: {
         type: 'value' as const,
         axisLabel: { fontSize: 10, formatter: (v: number) => `$${v}` },
+        splitLine: { lineStyle: { color: splitLineColor } },
       },
       yAxis: {
         type: 'category' as const,
         data: modelRanking.map((m) => m.model).reverse(),
         axisLabel: { fontSize: 10, width: 90, overflow: 'truncate' as const },
+        splitLine: { show: false },
       },
       series: [
         {
@@ -307,7 +315,7 @@ export default function CostDrilldown() {
         },
       ],
     }),
-    [modelRanking],
+    [modelRanking, splitLineColor],
   )
 
   return (
