@@ -47,4 +47,10 @@ export function useTokenData(): void {
     })
     return unsubscribe
   }, [fetchTokenData])
+
+  // Fallback polling every 5 minutes
+  useEffect(() => {
+    const timer = setInterval(fetchTokenData, 5 * 60 * 1000)
+    return () => clearInterval(timer)
+  }, [fetchTokenData])
 }

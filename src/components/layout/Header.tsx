@@ -25,16 +25,22 @@ export default function Header() {
     return undefined
   }, [lastUpdated])
 
+  const updateData = useDataStore((s) => s.updateData)
+  const setProjects = useDataStore((s) => s.setProjects)
+
   const handleRefresh = useCallback(async () => {
     setIsRefreshing(true)
     try {
-      await electronApi.refreshData()
+      const projects = await electronApi.refreshData()
+      if (projects) setProjects(projects)
+      const data = await electronApi.getTokenData('')
+      updateData(data)
     } catch (err) {
       console.error('Refresh failed:', err)
     } finally {
       setIsRefreshing(false)
     }
-  }, [])
+  }, [updateData, setProjects])
 
   const themeIcon =
     theme === 'dark' ? <Moon className="h-4 w-4" /> :
