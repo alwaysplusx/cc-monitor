@@ -13,6 +13,17 @@ import type {
 } from '../types/data'
 import type { TimeView } from '../lib/constants'
 
+export type DrilldownType = 'cost' | 'session' | 'model' | 'project' | 'usage-pattern'
+
+export interface DrilldownState {
+  type: DrilldownType
+  params: {
+    sessionId?: string
+    model?: string
+    projectPath?: string
+  }
+}
+
 interface DataState {
   // Project data
   projects: ProjectInfo[]
@@ -29,6 +40,9 @@ interface DataState {
   modelSummaries: ModelSummary[]
   sessionSummaries: SessionSummary[]
   modelSwitches: ModelSwitch[]
+  // Drilldown state
+  drilldown: DrilldownState | null
+
   // View state
   timeView: TimeView
   lastUpdated: Date | null
@@ -47,6 +61,8 @@ interface DataState {
     sessionSummaries: SessionSummary[]
     modelSwitches: ModelSwitch[]
   }) => void
+  openDrilldown: (type: DrilldownType, params?: DrilldownState['params']) => void
+  closeDrilldown: () => void
   setTimeView: (view: TimeView) => void
   setHighlightedTimeRange: (range: { start: string; end: string } | null) => void
   setLastUpdated: (date: Date) => void
@@ -63,6 +79,7 @@ export const useDataStore = create<DataState>((set) => ({
   modelSummaries: [],
   sessionSummaries: [],
   modelSwitches: [],
+  drilldown: null,
   timeView: 'hour',
   lastUpdated: null,
   highlightedTimeRange: null,
@@ -83,6 +100,10 @@ export const useDataStore = create<DataState>((set) => ({
       modelSwitches: data.modelSwitches,
       lastUpdated: new Date(),
     }),
+
+  openDrilldown: (type, params = {}) => set({ drilldown: { type, params } }),
+
+  closeDrilldown: () => set({ drilldown: null }),
 
   setTimeView: (view) => set({ timeView: view }),
 

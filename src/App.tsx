@@ -7,12 +7,24 @@ import ModelPie from './components/charts/ModelPie'
 import ProjectPie from './components/charts/ProjectPie'
 import SessionTable from './components/tables/SessionTable'
 import SettingsModal from './components/layout/SettingsModal'
+import DrilldownDrawer from './components/drilldown/DrilldownDrawer'
+import { useDataStore } from './stores/dataStore'
 import { useTokenData } from './hooks/useTokenData'
 import { useTheme } from './hooks/useTheme'
+
+const drilldownTitles: Record<string, string> = {
+  cost: '费用分析',
+  session: '会话详情',
+  model: '模型详情',
+  project: '项目详情',
+  'usage-pattern': '使用模式',
+}
 
 function App(): React.JSX.Element {
   useTokenData()
   useTheme()
+  const drilldown = useDataStore((s) => s.drilldown)
+  const closeDrilldown = useDataStore((s) => s.closeDrilldown)
 
   return (
     <div className="flex h-screen flex-col bg-[var(--background)] text-[var(--foreground)]">
@@ -49,6 +61,17 @@ function App(): React.JSX.Element {
         </div>
       </div>
       <SettingsModal />
+      <DrilldownDrawer
+        open={drilldown !== null}
+        onClose={closeDrilldown}
+        title={drilldown ? drilldownTitles[drilldown.type] : ''}
+      >
+        {drilldown?.type === 'cost' && <div>费用分析面板（待实现）</div>}
+        {drilldown?.type === 'session' && <div>会话详情面板（待实现）</div>}
+        {drilldown?.type === 'model' && <div>模型详情面板（待实现）</div>}
+        {drilldown?.type === 'project' && <div>项目详情面板（待实现）</div>}
+        {drilldown?.type === 'usage-pattern' && <div>使用模式面板（待实现）</div>}
+      </DrilldownDrawer>
     </div>
   )
 }
