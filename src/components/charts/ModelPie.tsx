@@ -90,7 +90,7 @@ export default function ModelPie() {
         <div className="flex min-h-0 flex-1 flex-col">
           <ReactECharts
             option={option}
-            style={{ height: 160 }}
+            style={{ height: 130 }}
             notMerge={false}
           />
 

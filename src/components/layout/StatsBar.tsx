@@ -6,13 +6,14 @@ import { cn } from '../../lib/utils'
 interface StatCardProps {
   label: string
   value: string
-  subtext: string
+  subtext?: string
+  subtextNode?: React.ReactNode
   color: string
   tooltip?: string
   tooltipAlign?: 'left' | 'right'
 }
 
-function StatCard({ label, value, subtext, color, tooltip, tooltipAlign = 'right' }: StatCardProps) {
+function StatCard({ label, value, subtext, subtextNode, color, tooltip, tooltipAlign = 'right' }: StatCardProps) {
   return (
     <div className="relative flex flex-1 flex-col gap-1 rounded-lg border border-[var(--border)] bg-[var(--card)] p-3 transition-colors hover:border-[var(--primary)]">
       <div className="flex items-center gap-1">
@@ -31,8 +32,25 @@ function StatCard({ label, value, subtext, color, tooltip, tooltipAlign = 'right
         )}
       </div>
       <span className={cn('font-mono text-xl font-bold', color)}>{value}</span>
-      <span className="text-xs text-[var(--muted-foreground)]">{subtext}</span>
+      {subtextNode ?? <span className="text-xs text-[var(--muted-foreground)]">{subtext}</span>}
     </div>
+  )
+}
+
+/** Split number into value + unit for colored display */
+function fmtSplit(n: number): { num: string; unit: string } {
+  if (n >= 1_000_000) return { num: (n / 1_000_000).toFixed(1), unit: 'M' }
+  if (n >= 1_000) return { num: (n / 1_000).toFixed(1), unit: 'K' }
+  return { num: n.toString(), unit: '' }
+}
+
+function ColoredToken({ value, color }: { value: number; color: string }) {
+  const { num, unit } = fmtSplit(value)
+  return (
+    <span className={cn('font-mono', color)}>
+      <span className="font-semibold">{num}</span>
+      {unit && <span className="text-[10px] opacity-60">{unit}</span>}
+    </span>
   )
 }
 
@@ -50,7 +68,7 @@ export default function StatsBar() {
   const recentInput = recent.reduce((s, r) => s + r.inputTokens, 0)
   const recentOutput = recent.reduce((s, r) => s + r.outputTokens, 0)
   const recentCache = recent.reduce((s, r) => s + r.cacheReadTokens, 0)
-  const recentTotal = recentInput + recentOutput
+  const recentTotal = recentInput + recentOutput + recentCache
 
   // Calculate active duration: from first to last record timestamp
   const timestamps = records.map((r) => r.timestamp.getTime()).filter((t) => t > 0)
@@ -58,7 +76,7 @@ export default function StatsBar() {
     timestamps.length > 1 ? Math.max(...timestamps) - Math.min(...timestamps) : 0
 
   return (
-    <div className="grid grid-cols-3 gap-3 p-4">
+    <div className="grid grid-cols-6 gap-3 p-4">
       <StatCard
         label="输入 Token"
         value={fmtK(totalInput)}
@@ -87,13 +105,27 @@ export default function StatsBar() {
         subtext={`共 ${requestCount} 次`}
         color="text-green-500"
         tooltip="所有项目的 API 请求次数累计"
+        tooltipAlign="left"
       />
       <StatCard
         label="近5小时"
         value={fmtK(recentTotal)}
-        subtext={`入 ${fmtK(recentInput)} / 出 ${fmtK(recentOutput)} / 缓存 ${fmtK(recentCache)} / ${recent.length}次`}
+        subtextNode={
+          <div className="flex items-center gap-1.5 text-xs">
+            <ColoredToken value={recentInput} color="text-blue-500" />
+            <span className="text-[var(--muted-foreground)]">/</span>
+            <ColoredToken value={recentOutput} color="text-purple-500" />
+            <span className="text-[var(--muted-foreground)]">/</span>
+            <ColoredToken value={recentCache} color="text-cyan-500" />
+            <span className="text-[var(--muted-foreground)]">/</span>
+            <span className="font-mono text-green-500">
+              <span className="font-semibold">{recent.length}</span>
+              <span className="text-[10px] opacity-60">次</span>
+            </span>
+          </div>
+        }
         color="text-rose-500"
-        tooltip="最近5小时的输入+输出 Token 合计"
+        tooltip="最近5小时的输入+输出+缓存 Token 合计"
       />
       <StatCard
         label="活跃时长"

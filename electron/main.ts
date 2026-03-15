@@ -11,8 +11,8 @@ let fileWatcher: FileWatcher | null = null
 
 function createWindow(): BrowserWindow {
   const mainWindow = new BrowserWindow({
-    width: 1200,
-    height: 800,
+    width: 1400,
+    height: 900,
     minWidth: 900,
     minHeight: 600,
     show: false,

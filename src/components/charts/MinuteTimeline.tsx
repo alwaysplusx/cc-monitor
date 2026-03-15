@@ -366,7 +366,7 @@ export default function MinuteTimeline() {
           key={timeView}
           ref={chartRef}
           option={option}
-          style={{ flex: 1, minHeight: 250 }}
+          style={{ flex: 1, minHeight: 180 }}
           notMerge={false}
           onEvents={{ click: onChartClick }}
         />

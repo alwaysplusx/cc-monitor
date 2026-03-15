@@ -22,7 +22,7 @@ export default function ProjectPie() {
   const tokenRecords = useDataStore((s) => s.tokenRecords)
   const { isDark } = useTheme()
 
-  const { projects, totalTokens } = useMemo(() => {
+  const { chartProjects, allProjects, totalTokens } = useMemo(() => {
     const map = new Map<string, { input: number; output: number; cacheRead: number }>()
     for (const r of tokenRecords) {
       const key = r.projectPath || '未知项目'
@@ -42,26 +42,28 @@ export default function ProjectPie() {
       })
       .sort((a, b) => b.total - a.total)
 
-    const major = all.filter((p) => p.percentage >= 5)
-    const minor = all.filter((p) => p.percentage < 5)
-    if (minor.length > 0) {
-      const merged: ProjectUsage = {
+    // Chart data: merge <1% into "其他"
+    const chartMajor = all.filter((p) => p.percentage >= 1)
+    const chartMinor = all.filter((p) => p.percentage < 1)
+    const chartProjects = [...chartMajor]
+    if (chartMinor.length > 0) {
+      chartProjects.push({
         name: '其他',
-        input: minor.reduce((s, p) => s + p.input, 0),
-        output: minor.reduce((s, p) => s + p.output, 0),
-        cacheRead: minor.reduce((s, p) => s + p.cacheRead, 0),
-        total: minor.reduce((s, p) => s + p.total, 0),
-        percentage: minor.reduce((s, p) => s + p.percentage, 0),
-      }
-      major.push(merged)
+        input: chartMinor.reduce((s, p) => s + p.input, 0),
+        output: chartMinor.reduce((s, p) => s + p.output, 0),
+        cacheRead: chartMinor.reduce((s, p) => s + p.cacheRead, 0),
+        total: chartMinor.reduce((s, p) => s + p.total, 0),
+        percentage: chartMinor.reduce((s, p) => s + p.percentage, 0),
+      })
     }
 
-    return { projects: major, totalTokens: total }
+    // List data: show all projects
+    return { chartProjects, allProjects: all, totalTokens: total }
   }, [tokenRecords])
 
   const option: EChartsOption = useMemo(() => {
     const themeObj = isDark ? echartsDarkTheme : echartsLightTheme
-    const data = projects.map((p, i) => ({
+    const data = chartProjects.map((p, i) => ({
       name: p.name,
       value: p.total,
       itemStyle: { color: PROJECT_COLORS[i % PROJECT_COLORS.length] },
@@ -117,9 +119,9 @@ export default function ProjectPie() {
         },
       ],
     }
-  }, [projects, totalTokens, isDark])
+  }, [chartProjects, totalTokens, isDark])
 
-  const hasData = projects.length > 0
+  const hasData = allProjects.length > 0
 
   return (
     <div className="flex h-full flex-col">
@@ -127,10 +129,10 @@ export default function ProjectPie() {
 
       {hasData ? (
         <div className="flex min-h-0 flex-1 flex-col">
-          <ReactECharts option={option} style={{ height: 160 }} notMerge={false} />
+          <ReactECharts option={option} style={{ height: 130 }} notMerge={false} />
 
           <div className="mt-2 max-h-[88px] space-y-1.5 overflow-y-auto">
-            {projects.map((p, i) => (
+            {allProjects.map((p, i) => (
               <div key={p.name} className="flex items-center gap-2 text-xs">
                 <span
                   className="h-2.5 w-2.5 shrink-0 rounded-full"

@@ -244,7 +244,14 @@ export function aggregateBySession(
       sessionId: first.sessionId,
       isSubagent: first.isSubagent,
       agentId: first.agentId,
-      model: first.model,
+      models: [...new Set(group.map((r) => r.model))],
+      modelBreakdown: (() => {
+        const mc = new Map<string, number>()
+        for (const r of group) mc.set(r.model, (mc.get(r.model) ?? 0) + 1)
+        return Array.from(mc.entries())
+          .map(([model, count]) => ({ model, count }))
+          .sort((a, b) => b.count - a.count)
+      })(),
       projectPath: first.projectPath,
       sessionFilePath: first.fileName,
       firstTimestamp: first.timestamp,

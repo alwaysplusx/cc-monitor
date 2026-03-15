@@ -110,7 +110,8 @@ export interface SessionSummary {
   sessionId: string
   isSubagent: boolean
   agentId: string
-  model: string
+  models: string[]
+  modelBreakdown: { model: string; count: number }[]
   projectPath: string
   sessionFilePath: string
   firstTimestamp: Date
