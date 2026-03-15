@@ -1,5 +1,5 @@
 // Usage pattern drilldown — hour x weekday heatmap, hourly density, daily active periods
-import { useMemo, useRef, useCallback } from 'react'
+import { useMemo, useRef, useCallback, useState } from 'react'
 import ReactECharts from 'echarts-for-react'
 import { useDataStore } from '../../stores/dataStore'
 import { useTheme } from '../../hooks/useTheme'
@@ -9,15 +9,25 @@ const HOURS = Array.from({ length: 24 }, (_, i) => `${i}`)
 
 const MODEL_COLORS = ['#3b82f6', '#8b5cf6', '#06b6d4', '#10b981', '#f59e0b', '#ef4444']
 
-/** Horizontally draggable legend strip */
-function DragScrollLegend({ models }: { models: string[] }) {
+/** Horizontally draggable legend strip with click-to-toggle */
+function DragScrollLegend({
+  models,
+  hidden,
+  onToggle,
+}: {
+  models: string[]
+  hidden: Set<string>
+  onToggle: (model: string) => void
+}) {
   const ref = useRef<HTMLDivElement>(null)
   const dragging = useRef(false)
+  const moved = useRef(false)
   const startX = useRef(0)
   const scrollLeft = useRef(0)
 
   const onMouseDown = useCallback((e: React.MouseEvent) => {
     dragging.current = true
+    moved.current = false
     startX.current = e.clientX
     scrollLeft.current = ref.current?.scrollLeft ?? 0
     ref.current!.style.cursor = 'grabbing'
@@ -27,6 +37,7 @@ function DragScrollLegend({ models }: { models: string[] }) {
     if (!dragging.current) return
     e.preventDefault()
     const dx = e.clientX - startX.current
+    if (Math.abs(dx) > 3) moved.current = true
     ref.current!.scrollLeft = scrollLeft.current - dx
   }, [])
 
@@ -35,27 +46,70 @@ function DragScrollLegend({ models }: { models: string[] }) {
     if (ref.current) ref.current.style.cursor = 'grab'
   }, [])
 
+  const handleClick = useCallback(
+    (model: string) => {
+      // Only toggle if not dragged
+      if (!moved.current) onToggle(model)
+    },
+    [onToggle],
+  )
+
+  const scrollBy = useCallback((dx: number) => {
+    ref.current?.scrollBy({ left: dx, behavior: 'smooth' })
+  }, [])
+
   return (
-    <div
-      ref={ref}
-      className="mb-1 cursor-grab select-none overflow-x-auto"
-      style={{ scrollbarWidth: 'none' }}
-      onMouseDown={onMouseDown}
-      onMouseMove={onMouseMove}
-      onMouseUp={onMouseUp}
-      onMouseLeave={onMouseUp}
-    >
-      <div className="flex w-max items-center gap-3 px-1 py-1">
-        {models.map((model, i) => (
-          <div key={model} className="flex shrink-0 items-center gap-1 text-[10px] text-[var(--foreground)]">
-            <span
-              className="inline-block h-2.5 w-2.5 shrink-0 rounded-sm"
-              style={{ backgroundColor: MODEL_COLORS[i % MODEL_COLORS.length] }}
-            />
-            <span className="whitespace-nowrap">{model}</span>
-          </div>
-        ))}
+    <div className="mb-1 flex items-center gap-1">
+      <button
+        onClick={() => scrollBy(-100)}
+        className="shrink-0 rounded p-0.5 text-[var(--muted-foreground)] hover:text-[var(--foreground)]"
+      >
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="M15.41 16.59L10.83 12l4.58-4.59L14 6l-6 6 6 6z"/></svg>
+      </button>
+      <div
+        ref={ref}
+        className="min-w-0 flex-1 cursor-grab select-none overflow-x-auto"
+        style={{ scrollbarWidth: 'none' }}
+        onMouseDown={onMouseDown}
+        onMouseMove={onMouseMove}
+        onMouseUp={onMouseUp}
+        onMouseLeave={onMouseUp}
+      >
+        <div className="flex w-max items-center gap-3 px-1 py-1">
+          {models.map((model, i) => {
+            const isHidden = hidden.has(model)
+            return (
+              <div
+                key={model}
+                className="flex shrink-0 cursor-pointer items-center gap-1 text-[10px] transition-opacity"
+                style={{ opacity: isHidden ? 0.35 : 1 }}
+                onClick={() => handleClick(model)}
+              >
+                <span
+                  className="inline-block h-2.5 w-2.5 shrink-0 rounded-sm"
+                  style={{
+                    backgroundColor: isHidden
+                      ? 'var(--muted-foreground)'
+                      : MODEL_COLORS[i % MODEL_COLORS.length],
+                  }}
+                />
+                <span
+                  className="whitespace-nowrap"
+                  style={{ textDecoration: isHidden ? 'line-through' : 'none' }}
+                >
+                  {model}
+                </span>
+              </div>
+            )
+          })}
+        </div>
       </div>
+      <button
+        onClick={() => scrollBy(100)}
+        className="shrink-0 rounded p-0.5 text-[var(--muted-foreground)] hover:text-[var(--foreground)]"
+      >
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6z"/></svg>
+      </button>
     </div>
   )
 }
@@ -139,6 +193,15 @@ export default function UsagePatternDrilldown() {
 
   // Hourly request density (24 bars, stacked by model)
   const hourlyModels = useMemo(() => [...new Set(records.map((r) => r.model))], [records])
+  const [hiddenModels, setHiddenModels] = useState<Set<string>>(new Set())
+  const toggleModel = useCallback((model: string) => {
+    setHiddenModels((prev) => {
+      const next = new Set(prev)
+      if (next.has(model)) next.delete(model)
+      else next.add(model)
+      return next
+    })
+  }, [])
 
   const hourlyOption = useMemo(() => {
     const modelHours = new Map<string, number[]>()
@@ -171,11 +234,13 @@ export default function UsagePatternDrilldown() {
         name: model,
         type: 'bar',
         stack: 'total',
-        data: modelHours.get(model)!,
+        data: hiddenModels.has(model)
+          ? modelHours.get(model)!.map(() => 0)
+          : modelHours.get(model)!,
         itemStyle: { color: MODEL_COLORS[i % MODEL_COLORS.length] },
       })),
     }
-  }, [records, hourlyModels])
+  }, [records, hourlyModels, hiddenModels])
 
   // Daily active periods (Gantt-style): last 7 days
   const ganttOption = useMemo(() => {
@@ -293,7 +358,7 @@ export default function UsagePatternDrilldown() {
           每小时请求密度
         </h3>
         {/* Draggable scrolling legend */}
-        <DragScrollLegend models={hourlyModels} />
+        <DragScrollLegend models={hourlyModels} hidden={hiddenModels} onToggle={toggleModel} />
         <ReactECharts option={hourlyOption} style={{ height: 200 }} />
       </div>
 
