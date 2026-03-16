@@ -7,7 +7,8 @@ import { electronApi } from '../../lib/ipc'
 import { cn } from '../../lib/utils'
 import { useSettingsStore } from '../../stores/settingsStore'
 
-const api = (window as { api?: { windowMinimize: () => void; windowMaximize: () => void; windowClose: () => void } }).api
+const api = (window as { api?: { windowMinimize: () => void; windowMaximize: () => void; windowClose: () => void; platform: string } }).api
+const isMac = api?.platform === 'darwin'
 
 export default function Header() {
   const lastUpdated = useDataStore((s) => s.lastUpdated)
@@ -54,8 +55,8 @@ export default function Header() {
 
   return (
     <header className="flex h-10 select-none items-center border-b border-[var(--border)] bg-[var(--card)]" style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}>
-      {/* Left: Logo + Title */}
-      <div className="flex items-center gap-2 pl-3">
+      {/* Left: Logo + Title — extra left padding on macOS for traffic-light buttons */}
+      <div className={cn('flex items-center gap-2', isMac ? 'pl-20' : 'pl-3')}>
         <Monitor className="h-5 w-5 text-[var(--primary)]" />
         <span className="text-xs font-semibold text-[var(--foreground)]">CC Monitor</span>
       </div>
@@ -103,31 +104,33 @@ export default function Header() {
           <Settings className="h-3.5 w-3.5" />
         </button>
 
-        {/* Separator */}
-        <div className="mx-1.5 h-4 w-px bg-[var(--border)]" />
-
-        {/* Window controls */}
-        <button
-          onClick={() => api?.windowMinimize()}
-          className="flex h-10 w-10 items-center justify-center text-[var(--muted-foreground)] hover:bg-[var(--accent)] hover:text-[var(--foreground)]"
-          title="最小化"
-        >
-          <Minus className="h-4 w-4" />
-        </button>
-        <button
-          onClick={() => api?.windowMaximize()}
-          className="flex h-10 w-10 items-center justify-center text-[var(--muted-foreground)] hover:bg-[var(--accent)] hover:text-[var(--foreground)]"
-          title="最大化"
-        >
-          <Square className="h-3.5 w-3.5" />
-        </button>
-        <button
-          onClick={() => api?.windowClose()}
-          className="flex h-10 w-10 items-center justify-center text-[var(--muted-foreground)] hover:bg-red-500/80 hover:text-white"
-          title="关闭"
-        >
-          <X className="h-4 w-4" />
-        </button>
+        {/* Window controls — Windows/Linux only (macOS uses native traffic-light) */}
+        {!isMac && (
+          <>
+            <div className="mx-1.5 h-4 w-px bg-[var(--border)]" />
+            <button
+              onClick={() => api?.windowMinimize()}
+              className="flex h-10 w-10 items-center justify-center text-[var(--muted-foreground)] hover:bg-[var(--accent)] hover:text-[var(--foreground)]"
+              title="最小化"
+            >
+              <Minus className="h-4 w-4" />
+            </button>
+            <button
+              onClick={() => api?.windowMaximize()}
+              className="flex h-10 w-10 items-center justify-center text-[var(--muted-foreground)] hover:bg-[var(--accent)] hover:text-[var(--foreground)]"
+              title="最大化"
+            >
+              <Square className="h-3.5 w-3.5" />
+            </button>
+            <button
+              onClick={() => api?.windowClose()}
+              className="flex h-10 w-10 items-center justify-center text-[var(--muted-foreground)] hover:bg-red-500/80 hover:text-white"
+              title="关闭"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </>
+        )}
       </div>
     </header>
   )

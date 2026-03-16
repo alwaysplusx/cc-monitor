@@ -10,6 +10,8 @@ import { IPC } from './ipc/channels'
 let fileWatcher: FileWatcher | null = null
 
 function createWindow(): BrowserWindow {
+  const isMac = process.platform === 'darwin'
+
   const mainWindow = new BrowserWindow({
     width: 1400,
     height: 900,
@@ -17,8 +19,10 @@ function createWindow(): BrowserWindow {
     minHeight: 600,
     show: false,
     title: 'CC Monitor',
-    frame: false,
-    titleBarStyle: 'hidden',
+    // macOS: keep native traffic-light buttons; Windows/Linux: use custom controls
+    ...(isMac
+      ? { titleBarStyle: 'hiddenInset', trafficLightPosition: { x: 12, y: 12 } }
+      : { frame: false }),
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
       sandbox: false,

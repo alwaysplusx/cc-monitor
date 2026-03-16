@@ -48,6 +48,7 @@ export interface ElectronAPI {
   windowMinimize(): void
   windowMaximize(): void
   windowClose(): void
+  platform: string
 }
 
 declare global {

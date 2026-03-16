@@ -25,10 +25,12 @@ const api = {
     ipcRenderer.on(IPC.WATCH_STATUS, handler)
     return () => ipcRenderer.removeListener(IPC.WATCH_STATUS, handler)
   },
-  // Window controls
+  // Window controls (used on Windows/Linux only)
   windowMinimize: () => ipcRenderer.send('window-minimize'),
   windowMaximize: () => ipcRenderer.send('window-maximize'),
   windowClose: () => ipcRenderer.send('window-close'),
+  // Platform info
+  platform: process.platform,
 }
 
 if (process.contextIsolated) {
