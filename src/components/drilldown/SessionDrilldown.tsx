@@ -75,11 +75,16 @@ export default function SessionDrilldown({ sessionId }: { sessionId: string }) {
     // Detect model switches
     for (let i = 1; i < sessionRecords.length; i++) {
       if (sessionRecords[i].model !== sessionRecords[i - 1].model) {
+        // Extract short model name: claude-opus-4-6 → opus, claude-sonnet-4-6 → sonnet
+        const parts = sessionRecords[i].model.split('-')
+        const shortName = parts.length >= 2 ? parts.slice(1, -2).join('-') || parts[1] : parts[0]
         modelSwitchLines.push({
           xAxis: i,
           label: {
-            formatter: sessionRecords[i].model.split('-').pop() || '',
+            formatter: shortName,
             fontSize: 9,
+            color: axisLabelColor,
+            padding: [0, 4],
           },
         })
       }
@@ -144,7 +149,14 @@ ${params.map((p) => `${p.seriesName}: ${fmtK(p.value)}`).join('<br/>')}`
           data: sessionRecords.map((r) => r.inputTokens),
           itemStyle: { color: CHART_COLORS.input },
           ...(modelSwitchLines.length > 0
-            ? { markLine: { data: modelSwitchLines, silent: true, lineStyle: { type: 'dashed' as const, color: '#888' } } }
+            ? {
+                markLine: {
+                  data: modelSwitchLines,
+                  silent: true,
+                  symbol: ['none', 'none'],
+                  lineStyle: { type: 'dashed' as const, color: isDark ? '#475569' : '#94a3b8', width: 1 },
+                },
+              }
             : {}),
         },
         {

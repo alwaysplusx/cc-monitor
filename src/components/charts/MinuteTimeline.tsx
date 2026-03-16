@@ -231,6 +231,8 @@ export default function MinuteTimeline() {
       tooltip: {
         trigger: 'axis',
         ...themeObj.tooltip,
+        confine: false,
+        appendToBody: true,
         formatter: (params: unknown) => {
           const items = params as Array<{ seriesName: string; value: number; axisValue: string }>
           if (!items.length) return ''
@@ -274,10 +276,24 @@ export default function MinuteTimeline() {
           ...themeObj.categoryAxis?.axisLabel,
           fontSize: 10,
           rotate: 0,
-          formatter: (v: string) => {
+          rich: {
+            date: {
+              fontSize: 9,
+              fontWeight: 'bold',
+              color: isDark ? '#94a3b8' : '#475569',
+              padding: [0, 0, 2, 0],
+            },
+          },
+          formatter: (v: string, index: number) => {
             if (timeView === 'minute' || timeView === 'hour') {
-              // "YYYY-MM-DDTHH:mm" → "HH:mm"
-              return v.length >= 16 ? v.slice(11, 16) : v
+              const hhmm = v.slice(11, 16)
+              // Show date at the very first data point, or at midnight boundary
+              const isFirstPoint = index === 0
+              const isMidnight = hhmm === '00:00' || (timeView === 'hour' && hhmm === '00:30')
+              if (isFirstPoint || isMidnight) {
+                return `{date|${v.slice(5, 10)}}\n${hhmm}`
+              }
+              return hhmm
             }
             if (timeView === 'day') {
               // dayBucket key is "YYYY-MM-DD", show "MM/DD"
@@ -327,7 +343,6 @@ export default function MinuteTimeline() {
           height: 20,
           start: defaultStartPct,
           end: 100,
-          zoomLock: true,
           borderColor: isDark ? '#1e293b' : '#d1d5db',
           backgroundColor: isDark ? '#0f1420' : '#f9fafb',
           fillerColor: isDark ? 'rgba(59,130,246,0.15)' : 'rgba(59,130,246,0.1)',
@@ -359,6 +374,12 @@ export default function MinuteTimeline() {
             // "YYYY-MM" → keep as is
             return value
           },
+        },
+        {
+          type: 'inside',
+          zoomOnMouseWheel: false,
+          moveOnMouseWheel: true,
+          moveOnMouseMove: false,
         },
       ],
       series: [

@@ -1,5 +1,5 @@
-// Project-level token usage distribution (ECharts donut chart + detail list)
-import { useMemo } from 'react'
+// Project-level token usage distribution (ECharts treemap + detail list)
+import { useMemo, useCallback } from 'react'
 import ReactECharts from 'echarts-for-react'
 import type { EChartsOption } from 'echarts'
 import { useDataStore } from '../../stores/dataStore'
@@ -7,7 +7,6 @@ import { useSettingsStore } from '../../stores/settingsStore'
 import { useTheme } from '../../hooks/useTheme'
 import { echartsLightTheme, echartsDarkTheme } from '../../lib/theme'
 import { fmtK } from '../../lib/format'
-import { useCallback } from 'react'
 
 const PROJECT_COLORS = ['#3b82f6', '#8b5cf6', '#06b6d4', '#10b981', '#f59e0b', '#ef4444', '#ec4899', '#6366f1']
 
@@ -63,7 +62,6 @@ export default function ProjectPie() {
       })
     }
 
-    // List data: show all projects
     return { chartProjects, allProjects: all, totalTokens: total }
   }, [tokenRecords, mergeThreshold])
 
@@ -76,52 +74,46 @@ export default function ProjectPie() {
     }))
 
     return {
-      ...themeObj,
-      legend: { show: false },
+      backgroundColor: 'transparent',
       tooltip: {
-        trigger: 'item',
         ...themeObj.tooltip,
         formatter: (params: unknown) => {
-          const p = params as { name: string; value: number; percent: number }
-          return `${p.name}<br/>${fmtK(p.value)} (${p.percent.toFixed(1)}%)`
+          const p = params as { name: string; value: number }
+          const pct = totalTokens > 0 ? ((p.value / totalTokens) * 100).toFixed(1) : '0'
+          return `${p.name}<br/>${fmtK(p.value)} (${pct}%)`
         },
       },
-      graphic: [
-        {
-          type: 'text',
-          left: 'center',
-          top: '35%',
-          style: {
-            text: fmtK(totalTokens),
-            fontSize: 16,
-            fontWeight: 'bold',
-            fontFamily: 'JetBrains Mono, monospace',
-            fill: isDark ? '#e2e8f0' : '#1a202c',
-            textAlign: 'center',
-          },
-        },
-        {
-          type: 'text',
-          left: 'center',
-          top: '48%',
-          style: {
-            text: '总计',
-            fontSize: 10,
-            fill: isDark ? '#8892a8' : '#64748b',
-            textAlign: 'center',
-          },
-        },
-      ],
       series: [
         {
-          type: 'pie',
-          radius: ['45%', '70%'],
-          center: ['50%', '42%'],
+          type: 'treemap',
+          left: 0,
+          right: 0,
+          top: 0,
+          bottom: 0,
+          roam: false,
+          nodeClick: false,
+          breadcrumb: { show: false },
+          label: {
+            show: true,
+            fontSize: 11,
+            fontWeight: 'bold',
+            color: '#fff',
+            formatter: (params: unknown) => {
+              const p = params as { name: string; value: number }
+              const pct = totalTokens > 0 ? ((p.value / totalTokens) * 100).toFixed(0) : '0'
+              return `${p.name}\n${fmtK(p.value)}  ${pct}%`
+            },
+          },
+          itemStyle: {
+            borderColor: isDark ? '#1e293b' : '#ffffff',
+            borderWidth: 2,
+            gapWidth: 2,
+            borderRadius: 4,
+          },
+          emphasis: {
+            itemStyle: { shadowBlur: 6, shadowColor: 'rgba(0,0,0,0.3)' },
+          },
           data,
-          label: { show: false },
-          emphasis: { scaleSize: 8 },
-          animationType: 'scale',
-          animationEasing: 'elasticOut',
         },
       ],
     }
@@ -146,35 +138,14 @@ export default function ProjectPie() {
 
   return (
     <div className="flex h-full flex-col">
-      <h3 className="mb-2 text-xs font-semibold text-[var(--foreground)]">项目分布</h3>
+      <div className="mb-1 flex items-baseline justify-between">
+        <h3 className="text-xs font-semibold text-[var(--foreground)]">项目分布</h3>
+        <span className="font-mono text-xs text-[var(--muted-foreground)]">{fmtK(totalTokens)}</span>
+      </div>
 
       {hasData ? (
-        <div className="flex min-h-0 flex-1 flex-col">
-          <ReactECharts option={option} style={{ height: 130 }} notMerge={false} onEvents={{ click: onChartClick }} />
-
-          <div className="mt-2 max-h-[88px] space-y-1.5 overflow-y-auto">
-            {allProjects.map((p, i) => (
-              <div
-                key={p.name}
-                className="flex cursor-pointer items-center gap-2 rounded-sm px-1 text-xs transition-colors hover:bg-[var(--accent)]"
-                onClick={() => p.path && openDrilldown('project', { projectPath: p.path })}
-              >
-                <span
-                  className="h-2.5 w-2.5 shrink-0 rounded-full"
-                  style={{ backgroundColor: PROJECT_COLORS[i % PROJECT_COLORS.length] }}
-                />
-                <span className="flex-1 truncate text-[var(--foreground)]" title={p.name}>
-                  {p.name}
-                </span>
-                <span className="font-mono text-[var(--muted-foreground)]">
-                  {fmtK(p.total)}
-                </span>
-                <span className="w-10 text-right font-mono text-[var(--muted-foreground)]">
-                  {p.percentage.toFixed(0)}%
-                </span>
-              </div>
-            ))}
-          </div>
+        <div className="min-h-0 flex-1">
+          <ReactECharts option={option} style={{ height: '100%' }} notMerge={false} onEvents={{ click: onChartClick }} />
         </div>
       ) : (
         <div className="flex flex-1 items-center justify-center text-xs text-[var(--muted-foreground)]">

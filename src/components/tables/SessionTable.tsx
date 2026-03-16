@@ -1,9 +1,12 @@
-// Session / Subagent detail table with expandable rows
-import { useState, useMemo, Fragment } from 'react'
-import { ChevronRight, FolderOpen } from 'lucide-react'
+// Session / Subagent detail table with expandable rows and sortable columns
+import { useState, useMemo, useCallback, Fragment } from 'react'
+import { ChevronRight, FolderOpen, ArrowUp, ArrowDown } from 'lucide-react'
 import { useDataStore } from '../../stores/dataStore'
 import { electronApi } from '../../lib/ipc'
 import { cn } from '../../lib/utils'
+
+type SortKey = 'requestCount' | 'totalInput' | 'totalOutput' | 'totalCacheRead' | 'firstTimestamp' | 'duration' | null
+type SortDir = 'asc' | 'desc'
 
 /** Split formatted number into value and unit parts */
 function splitUnit(n: number): { num: string; unit: string } {
@@ -108,7 +111,25 @@ export default function SessionTable() {
   const openDrilldown = useDataStore((s) => s.openDrilldown)
   const [expanded, setExpanded] = useState<Set<string>>(new Set())
   const [page, setPage] = useState(0)
+  const [sortKey, setSortKey] = useState<SortKey>(null)
+  const [sortDir, setSortDir] = useState<SortDir>('desc')
   const pageSize = 10
+
+  const handleSort = useCallback((key: SortKey) => {
+    if (sortKey === key) {
+      if (sortDir === 'desc') {
+        setSortDir('asc')
+      } else {
+        // Third click: reset to default
+        setSortKey(null)
+        setSortDir('desc')
+      }
+    } else {
+      setSortKey(key)
+      setSortDir('desc')
+    }
+    setPage(0)
+  }, [sortKey, sortDir])
 
   const { mainSessions, subagentMap } = useMemo(() => {
     const mains = sessionSummaries.filter((s) => !s.isSubagent)
@@ -121,6 +142,27 @@ export default function SessionTable() {
     }
     return { mainSessions: mains, subagentMap: subMap }
   }, [sessionSummaries])
+
+  const sortedSessions = useMemo(() => {
+    if (!sortKey) return mainSessions
+    const sorted = [...mainSessions]
+    const dir = sortDir === 'desc' ? -1 : 1
+    sorted.sort((a, b) => {
+      let av: number, bv: number
+      if (sortKey === 'duration') {
+        av = a.lastTimestamp.getTime() - a.firstTimestamp.getTime()
+        bv = b.lastTimestamp.getTime() - b.firstTimestamp.getTime()
+      } else if (sortKey === 'firstTimestamp') {
+        av = a.firstTimestamp.getTime()
+        bv = b.firstTimestamp.getTime()
+      } else {
+        av = a[sortKey]
+        bv = b[sortKey]
+      }
+      return (av - bv) * dir
+    })
+    return sorted
+  }, [mainSessions, sortKey, sortDir])
 
   const toggleExpand = (id: string) => {
     setExpanded((prev) => {
@@ -150,14 +192,30 @@ export default function SessionTable() {
   const maxCache = useMemo(() => Math.max(...sessionSummaries.map((s) => s.totalCacheRead), 1), [sessionSummaries])
   const maxReq = useMemo(() => Math.max(...sessionSummaries.map((s) => s.requestCount), 1), [sessionSummaries])
 
-  const totalPages = Math.max(1, Math.ceil(mainSessions.length / pageSize))
+  const totalPages = Math.max(1, Math.ceil(sortedSessions.length / pageSize))
   const safePage = Math.min(page, totalPages - 1)
-  const pagedSessions = mainSessions.slice(safePage * pageSize, (safePage + 1) * pageSize)
+  const pagedSessions = sortedSessions.slice(safePage * pageSize, (safePage + 1) * pageSize)
 
-  const hasData = mainSessions.length > 0
+  const hasData = sortedSessions.length > 0
 
   const thCls = 'whitespace-nowrap px-2 py-1.5 text-[var(--muted-foreground)]'
   const tdCls = 'whitespace-nowrap px-2 py-1.5'
+
+  const SortIcon = ({ col }: { col: SortKey }) => {
+    if (sortKey !== col) return null
+    return sortDir === 'desc'
+      ? <ArrowDown className="ml-0.5 inline h-3 w-3" />
+      : <ArrowUp className="ml-0.5 inline h-3 w-3" />
+  }
+
+  const sortableTh = (label: string, key: SortKey, extra?: string) => (
+    <th
+      className={cn(thCls, 'cursor-pointer select-none hover:text-[var(--foreground)]', extra)}
+      onClick={() => handleSort(key)}
+    >
+      {label}<SortIcon col={key} />
+    </th>
+  )
 
   return (
     <div>
@@ -172,13 +230,13 @@ export default function SessionTable() {
                 <th className={thCls}>ID</th>
                 <th className={thCls}>项目</th>
                 <th className={cn(thCls, 'w-full')}>会话</th>
-                <th className={cn(thCls, 'text-right text-green-500')}>请求</th>
-                <th className={cn(thCls, 'text-right text-blue-500')}>输入</th>
-                <th className={cn(thCls, 'text-right text-purple-500')}>输出</th>
-                <th className={cn(thCls, 'text-right text-cyan-500')}>缓存</th>
+                {sortableTh('请求', 'requestCount', 'text-right text-green-500')}
+                {sortableTh('输入', 'totalInput', 'text-right text-blue-500')}
+                {sortableTh('输出', 'totalOutput', 'text-right text-purple-500')}
+                {sortableTh('缓存', 'totalCacheRead', 'text-right text-cyan-500')}
                 <th className={thCls}>模型</th>
-                <th className={thCls}>开始</th>
-                <th className={thCls}>时长</th>
+                {sortableTh('开始', 'firstTimestamp')}
+                {sortableTh('时长', 'duration')}
               </tr>
             </thead>
             <tbody>
@@ -310,7 +368,7 @@ export default function SessionTable() {
           {totalPages > 1 && (
             <div className="mt-auto flex items-center justify-between border-t border-[var(--border)] px-2 py-2 text-xs text-[var(--muted-foreground)]">
               <span>
-                共 {mainSessions.length} 个会话，第 {safePage + 1}/{totalPages} 页
+                共 {sortedSessions.length} 个会话，第 {safePage + 1}/{totalPages} 页
               </span>
               <div className="flex items-center gap-1">
                 <button
