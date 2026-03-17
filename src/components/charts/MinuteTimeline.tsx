@@ -1,7 +1,8 @@
 // Minute-level token consumption timeline (ECharts stacked area chart)
-import { useMemo, useCallback, useRef } from 'react'
+import { useMemo, useCallback, useRef, useState, useEffect } from 'react'
 import ReactECharts from 'echarts-for-react'
 import type { EChartsOption } from 'echarts'
+import { Info } from 'lucide-react'
 import { useDataStore } from '../../stores/dataStore'
 import { useTheme } from '../../hooks/useTheme'
 import { echartsLightTheme, echartsDarkTheme } from '../../lib/theme'
@@ -21,6 +22,7 @@ export default function MinuteTimeline() {
   const setHighlightedTimeRange = useDataStore((s) => s.setHighlightedTimeRange)
   const { isDark } = useTheme()
   const chartRef = useRef<ReactECharts>(null)
+  const [windowDateLabel, setWindowDateLabel] = useState('')
 
   const tabs: { key: TimeView; label: string }[] = [
     { key: 'minute', label: '分钟' },
@@ -61,7 +63,7 @@ export default function MinuteTimeline() {
     }
 
     if (timeView === 'minute') {
-      // Per-minute view, range = 4h (4x default 1h), slider = 25%
+      // Per-minute view, from earliest data to now, default window = last 1h
       const now = new Date()
       const minMap = new Map<string, { input: number; output: number; cache: number }>()
       for (const b of minuteBuckets) {
@@ -72,11 +74,13 @@ export default function MinuteTimeline() {
         return { xData: [] as string[], inputData: [] as number[], outputData: [] as number[], cacheData: [] as number[], defaultStartPct: 0 }
       }
 
-      const cursor = new Date(now)
-      cursor.setMinutes(cursor.getMinutes() - 4 * 60)
-      cursor.setSeconds(0, 0)
+      // Start from earliest data point
+      const sortedKeys = Array.from(minMap.keys()).sort()
+      const earliest = new Date(sortedKeys[0])
+      earliest.setSeconds(0, 0)
 
       const slots: Array<{ key: string; input: number; output: number; cache: number }> = []
+      const cursor = new Date(earliest)
       while (cursor <= now) {
         const key = fmtSlotKey(cursor)
         const data = minMap.get(key) ?? { input: 0, output: 0, cache: 0 }
@@ -84,18 +88,22 @@ export default function MinuteTimeline() {
         cursor.setMinutes(cursor.getMinutes() + 1)
       }
 
+      // Default window: show last 1 hour
+      const defaultWindowMinutes = 60
+      const startPct = Math.max(0, ((slots.length - defaultWindowMinutes) / slots.length) * 100)
+
       return {
         xData: slots.map((s) => s.key),
         inputData: slots.map((s) => s.input),
         outputData: slots.map((s) => s.output),
         cacheData: slots.map((s) => s.cache),
-        defaultStartPct: 75,
+        defaultStartPct: startPct,
         modelBreakdownMap: mbMap,
       }
     }
 
     if (timeView === 'hour') {
-      // All data as 30-min slots, gap-filled from earliest to now
+      // 30-min slots, from earliest data to now, default window = last 6h
       const now = new Date()
       const slotMap = new Map<string, { input: number; output: number; cache: number }>()
       for (const b of minuteBuckets) {
@@ -113,14 +121,13 @@ export default function MinuteTimeline() {
         return { xData: [] as string[], inputData: [] as number[], outputData: [] as number[], cacheData: [] as number[], defaultStartPct: 0 }
       }
 
-      // Total range = 24h (4x default 6h), slider = 25%
-      const defaultSlots = 12
-      const cursor = new Date(now)
-      cursor.setMinutes(cursor.getMinutes() - defaultSlots * 4 * 30)
-      // Align to 30-min boundary
-      cursor.setMinutes(cursor.getMinutes() < 30 ? 0 : 30, 0, 0)
+      // Start from earliest data point, aligned to 30-min boundary
+      const sortedKeys = Array.from(slotMap.keys()).sort()
+      const earliest = new Date(sortedKeys[0])
+      earliest.setMinutes(earliest.getMinutes() < 30 ? 0 : 30, 0, 0)
 
       const slots: Array<{ key: string; input: number; output: number; cache: number }> = []
+      const cursor = new Date(earliest)
       while (cursor <= now) {
         const key = fmtSlotKey(cursor)
         const data = slotMap.get(key) ?? { input: 0, output: 0, cache: 0 }
@@ -128,7 +135,9 @@ export default function MinuteTimeline() {
         cursor.setMinutes(cursor.getMinutes() + 30)
       }
 
-      const startPct = 75
+      // Default window: show last 6 hours (12 slots)
+      const defaultWindowSlots = 12
+      const startPct = Math.max(0, ((slots.length - defaultWindowSlots) / slots.length) * 100)
 
       return {
         xData: slots.map((s) => s.key),
@@ -287,10 +296,9 @@ export default function MinuteTimeline() {
           formatter: (v: string, index: number) => {
             if (timeView === 'minute' || timeView === 'hour') {
               const hhmm = v.slice(11, 16)
-              // Show date at the very first data point, or at midnight boundary
-              const isFirstPoint = index === 0
+              // Show date only at midnight boundary
               const isMidnight = hhmm === '00:00' || (timeView === 'hour' && hhmm === '00:30')
-              if (isFirstPoint || isMidnight) {
+              if (index > 0 && isMidnight) {
                 return `{date|${v.slice(5, 10)}}\n${hhmm}`
               }
               return hhmm
@@ -375,12 +383,6 @@ export default function MinuteTimeline() {
             return value
           },
         },
-        {
-          type: 'inside',
-          zoomOnMouseWheel: false,
-          moveOnMouseWheel: true,
-          moveOnMouseMove: false,
-        },
       ],
       series: [
         {
@@ -422,6 +424,40 @@ export default function MinuteTimeline() {
     }
   }, [xData, inputData, outputData, cacheData, markLines, isDark, defaultStartPct, timeView, modelBreakdownMap])
 
+  // Track visible date range from dataZoom
+  const lastDateRef = useRef('')
+  const onDataZoom = useCallback(
+    (params: { start?: number; end?: number; batch?: { start: number; end: number }[] }) => {
+      if (timeView !== 'minute' && timeView !== 'hour') return
+      const start = params.batch?.[0]?.start ?? params.start ?? 0
+      const startIdx = Math.floor((start / 100) * (xData.length - 1))
+      const startKey = xData[Math.max(0, startIdx)]
+      if (!startKey) return
+      const date = startKey.slice(0, 10) // YYYY-MM-DD
+      if (date !== lastDateRef.current) {
+        lastDateRef.current = date
+        setWindowDateLabel(date.slice(5)) // MM-DD
+      }
+    },
+    [xData, timeView],
+  )
+
+  // Initialize date label when data changes
+  useMemo(() => {
+    if ((timeView === 'minute' || timeView === 'hour') && xData.length > 0) {
+      // Use the start of default window
+      const startIdx = Math.floor((defaultStartPct / 100) * (xData.length - 1))
+      const key = xData[Math.max(0, startIdx)]
+      if (key) {
+        const date = key.slice(5, 10)
+        lastDateRef.current = key.slice(0, 10)
+        setWindowDateLabel(date)
+      }
+    } else {
+      setWindowDateLabel('')
+    }
+  }, [xData, timeView, defaultStartPct])
+
   const onChartClick = useCallback(
     (params: { dataIndex?: number }) => {
       if (params.dataIndex !== undefined && xData[params.dataIndex]) {
@@ -432,12 +468,49 @@ export default function MinuteTimeline() {
     [xData, setHighlightedTimeRange],
   )
 
+  // Shift key: dynamically add/remove inside dataZoom for horizontal scroll
+  useEffect(() => {
+    const chart = chartRef.current?.getEchartsInstance()
+    if (!chart) return
+
+    const insideZoom = {
+      type: 'inside' as const,
+      zoomOnMouseWheel: false,
+      moveOnMouseWheel: true,
+      moveOnMouseMove: false,
+    }
+
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== 'Shift') return
+      const opt = chart.getOption() as { dataZoom?: object[] }
+      const dzList = opt.dataZoom ?? []
+      const hasInside = dzList.some((d: { type?: string }) => d.type === 'inside')
+      if (!hasInside) {
+        chart.setOption({ dataZoom: [...dzList, insideZoom] })
+      }
+    }
+
+    const onKeyUp = (e: KeyboardEvent) => {
+      if (e.key !== 'Shift') return
+      const opt = chart.getOption() as { dataZoom?: object[] }
+      const dzList = opt.dataZoom ?? []
+      chart.setOption({ dataZoom: dzList.filter((d: { type?: string }) => d.type !== 'inside') }, { replaceMerge: ['dataZoom'] })
+    }
+
+    window.addEventListener('keydown', onKeyDown)
+    window.addEventListener('keyup', onKeyUp)
+    return () => {
+      window.removeEventListener('keydown', onKeyDown)
+      window.removeEventListener('keyup', onKeyUp)
+    }
+  }, [timeView, xData])
+
   const hasData = xData.length > 0
 
   return (
     <div className="flex h-full flex-col">
-      {/* Time view tabs */}
-      <div className="mb-2 flex gap-1">
+      {/* Time view tabs + date label */}
+      <div className="mb-2 flex items-center gap-1">
         {tabs.map((tab) => (
           <button
             key={tab.key}
@@ -451,6 +524,19 @@ export default function MinuteTimeline() {
             {tab.label}
           </button>
         ))}
+        <div className="ml-auto flex items-center gap-2">
+          {windowDateLabel && (
+            <span className="font-mono text-xs font-medium text-[var(--muted-foreground)]">
+              {windowDateLabel}
+            </span>
+          )}
+          <span className="group/tip relative cursor-help text-[var(--muted-foreground)] opacity-50 transition-opacity hover:opacity-100">
+            <Info className="h-3.5 w-3.5" />
+            <span className="pointer-events-none absolute right-0 top-5 z-50 hidden w-48 rounded-md border border-[var(--border)] bg-[var(--popover)] px-2.5 py-1.5 text-xs leading-relaxed text-[var(--popover-foreground)] shadow-md group-hover/tip:block">
+              按住 Shift + 滑动可左右平移时间窗口；拖拽底部滑块可调整窗口范围
+            </span>
+          </span>
+        </div>
       </div>
 
       {/* Chart */}
@@ -461,7 +547,7 @@ export default function MinuteTimeline() {
           option={option}
           style={{ flex: 1, minHeight: 180 }}
           notMerge={false}
-          onEvents={{ click: onChartClick }}
+          onEvents={{ click: onChartClick, datazoom: onDataZoom }}
         />
       ) : (
         <div className="flex flex-1 items-center justify-center text-sm text-[var(--muted-foreground)]">

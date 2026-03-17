@@ -13,7 +13,7 @@ import type {
 } from '../types/data'
 import type { TimeView } from '../lib/constants'
 
-export type DrilldownType = 'cost' | 'session' | 'model' | 'project' | 'usage-pattern'
+export type DrilldownType = 'cost' | 'session' | 'model' | 'project' | 'usage-pattern' | 'day'
 
 export interface DrilldownState {
   type: DrilldownType
@@ -21,6 +21,7 @@ export interface DrilldownState {
     sessionId?: string
     model?: string
     projectPath?: string
+    day?: string // YYYY-MM-DD
   }
 }
 

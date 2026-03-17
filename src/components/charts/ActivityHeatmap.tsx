@@ -1,5 +1,5 @@
 // GitHub-style activity heatmap showing daily token consumption
-import { useMemo } from 'react'
+import { useMemo, useCallback } from 'react'
 import ReactECharts from 'echarts-for-react'
 import type { EChartsOption } from 'echarts'
 import { useDataStore } from '../../stores/dataStore'
@@ -8,6 +8,7 @@ import { fmtK } from '../../lib/format'
 
 export default function ActivityHeatmap() {
   const dayBuckets = useDataStore((s) => s.dayBuckets)
+  const openDrilldown = useDataStore((s) => s.openDrilldown)
   const { isDark } = useTheme()
 
   const { data, range, max } = useMemo(() => {
@@ -96,9 +97,17 @@ export default function ActivityHeatmap() {
     }
   }, [data, range, max, isDark])
 
+  const onChartClick = useCallback(
+    (params: { value?: [string, number] }) => {
+      const day = params.value?.[0]
+      if (day) openDrilldown('day', { day })
+    },
+    [openDrilldown],
+  )
+
   return (
     <div className="flex h-full flex-col">
-      <ReactECharts option={option} style={{ flex: 1, minHeight: 120 }} notMerge={false} />
+      <ReactECharts option={option} style={{ flex: 1, minHeight: 120 }} notMerge={false} onEvents={{ click: onChartClick }} />
     </div>
   )
 }

@@ -78,6 +78,10 @@ export function registerIpcHandlers(): void {
 
   ipcMain.handle(IPC.REFRESH, () => {
     const settings = readSettings()
+    const baseDir = settings.claudeDataDir || getDefaultClaudeDir()
+    // Clear cache and reload all files to ensure fresh data
+    fileCache.clear()
+    fileCache.loadProjectFiles(baseDir)
     return scanProjects(settings.claudeDataDir)
   })
 }

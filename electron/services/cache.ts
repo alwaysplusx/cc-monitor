@@ -77,6 +77,13 @@ export class FileCache {
   }
 
   /**
+   * Clear all cached entries for a full reload.
+   */
+  clear(): void {
+    this.cache.clear()
+  }
+
+  /**
    * Return all cached TokenRecords across all files.
    */
   getAllRecords(): TokenRecord[] {
@@ -91,6 +98,8 @@ export class FileCache {
    * Recursively find and load all JSONL files under a project directory into cache.
    */
   loadProjectFiles(projectDir: string): void {
+    const loadedPaths = new Set<string>()
+
     const findAndLoad = (dir: string): void => {
       let entries
       try {
@@ -104,10 +113,18 @@ export class FileCache {
           findAndLoad(fullPath)
         } else if (entry.isFile() && entry.name.endsWith('.jsonl')) {
           this.getOrParse(fullPath)
+          loadedPaths.add(this.normalizePath(fullPath))
         }
       }
     }
     findAndLoad(projectDir)
+
+    // Remove cache entries for files that no longer exist on disk
+    for (const key of this.cache.keys()) {
+      if (!loadedPaths.has(key)) {
+        this.cache.delete(key)
+      }
+    }
   }
 
   /**
