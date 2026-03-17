@@ -1,21 +1,29 @@
 // Day drilldown panel — daily summary with hourly chart, model/project breakdown, sessions
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import ReactECharts from 'echarts-for-react'
 import { useDataStore } from '../../stores/dataStore'
 import { useSettingsStore } from '../../stores/settingsStore'
 import { useTheme } from '../../hooks/useTheme'
 import { getModelPricing, CHART_COLORS } from '../../lib/constants'
 import { fmtK, fmtDuration } from '../../lib/format'
+import DatePicker from '../ui/DatePicker'
 
 const MODEL_COLORS = ['#3b82f6', '#8b5cf6', '#06b6d4', '#10b981', '#f59e0b', '#ef4444', '#ec4899', '#6366f1']
 const PROJECT_COLORS = ['#3b82f6', '#8b5cf6', '#06b6d4', '#10b981', '#f59e0b', '#ef4444', '#ec4899', '#6366f1']
 
 export default function DayDrilldown({ day }: { day: string }) {
   const records = useDataStore((s) => s.tokenRecords)
+  const dayBuckets = useDataStore((s) => s.dayBuckets)
   const sessionSummaries = useDataStore((s) => s.sessionSummaries)
   const openDrilldown = useDataStore((s) => s.openDrilldown)
   const modelPricing = useSettingsStore((s) => s.modelPricing)
   const { isDark } = useTheme()
+
+  // Days with activity for the date picker
+  const activeDays = useMemo(
+    () => new Set(dayBuckets.filter((b) => b.input + b.output > 0).map((b) => b.day)),
+    [dayBuckets],
+  )
 
   const axisLabelColor = isDark ? '#8892a8' : '#64748b'
   const splitLineColor = isDark ? '#151d2e' : '#f1f5f9'
@@ -170,8 +178,28 @@ export default function DayDrilldown({ day }: { day: string }) {
     )
   }
 
+  // Compare date state, default to previous day
+  const defaultCompareDay = useMemo(() => {
+    const d = new Date(day)
+    d.setDate(d.getDate() - 1)
+    return d.toISOString().slice(0, 10)
+  }, [day])
+  const [compareDay, setCompareDay] = useState(defaultCompareDay)
+
   return (
     <div className="space-y-5">
+      {/* Compare picker */}
+      <div className="flex items-center gap-2">
+        <DatePicker value={compareDay} onChange={setCompareDay} max={new Date().toISOString().slice(0, 10)} activeDays={activeDays} />
+        <button
+          onClick={() => openDrilldown('day-compare', { day, compareDay })}
+          disabled={compareDay === day}
+          className="rounded-md bg-[var(--primary)] px-3 py-1.5 text-xs text-white transition-colors hover:opacity-90 disabled:opacity-40"
+        >
+          对比
+        </button>
+      </div>
+
       {/* Summary cards */}
       <div className="grid grid-cols-4 gap-2">
         {[

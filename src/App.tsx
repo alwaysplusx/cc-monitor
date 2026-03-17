@@ -14,6 +14,7 @@ import ModelDrilldown from './components/drilldown/ModelDrilldown'
 import ProjectDrilldown from './components/drilldown/ProjectDrilldown'
 import UsagePatternDrilldown from './components/drilldown/UsagePatternDrilldown'
 import DayDrilldown from './components/drilldown/DayDrilldown'
+import DayCompareDrilldown from './components/drilldown/DayCompareDrilldown'
 import { useDataStore } from './stores/dataStore'
 import { useTokenData } from './hooks/useTokenData'
 import { useTheme } from './hooks/useTheme'
@@ -25,6 +26,7 @@ const drilldownTitles: Record<string, string> = {
   project: '项目详情',
   'usage-pattern': '使用模式',
   day: '日详情',
+  'day-compare': '日对比',
 }
 
 function App(): React.JSX.Element {
@@ -75,7 +77,11 @@ function App(): React.JSX.Element {
         onClose={closeDrilldown}
         onBack={goBackDrilldown}
         canGoBack={drilldownHistory.length > 0}
-        title={drilldown ? (drilldown.type === 'day' && drilldown.params.day ? `${drilldown.params.day} 日详情` : drilldownTitles[drilldown.type]) : ''}
+        title={drilldown ? (
+          drilldown.type === 'day' && drilldown.params.day ? `${drilldown.params.day} 日详情` :
+          drilldown.type === 'day-compare' && drilldown.params.day ? `${drilldown.params.day} vs ${drilldown.params.compareDay}` :
+          drilldownTitles[drilldown.type]
+        ) : ''}
       >
         {drilldown?.type === 'cost' && <CostDrilldown />}
         {drilldown?.type === 'session' && drilldown.params.sessionId && (
@@ -90,6 +96,9 @@ function App(): React.JSX.Element {
         {drilldown?.type === 'usage-pattern' && <UsagePatternDrilldown />}
         {drilldown?.type === 'day' && drilldown.params.day && (
           <DayDrilldown day={drilldown.params.day} />
+        )}
+        {drilldown?.type === 'day-compare' && drilldown.params.day && drilldown.params.compareDay && (
+          <DayCompareDrilldown day={drilldown.params.day} compareDay={drilldown.params.compareDay} />
         )}
       </DrilldownDrawer>
     </div>
