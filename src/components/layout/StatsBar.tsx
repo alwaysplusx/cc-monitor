@@ -388,11 +388,12 @@ export default function StatsBar() {
   const recentCache = recent.reduce((s, r) => s + r.cacheReadTokens, 0)
   const recentTotal = recentInput + recentOutput + recentCache
 
-  // Last 24 hours consumption
-  const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000)
-  const last24h = records.filter((r) => r.timestamp >= twentyFourHoursAgo)
-  const todayTotal = last24h.reduce((s, r) => s + r.inputTokens + r.outputTokens + r.cacheReadTokens, 0)
-  const todayRequests = last24h.length
+  // Today's consumption (natural day: 00:00 to now)
+  const todayStart = new Date()
+  todayStart.setHours(0, 0, 0, 0)
+  const todayRecords = records.filter((r) => r.timestamp >= todayStart)
+  const todayTotal = todayRecords.reduce((s, r) => s + r.inputTokens + r.outputTokens + r.cacheReadTokens, 0)
+  const todayRequests = todayRecords.length
   // Recent days for comparison
   const recentDays = useMemo(() => {
     const bucketMap = new Map(dayBuckets.map((b) => [b.day, b]))
@@ -546,7 +547,7 @@ export default function StatsBar() {
         tooltip={`最近${recentHours}小时的输入+输出+缓存 Token 合计`}
       />
       <StatCard
-        label="近24小时"
+        label="今日"
         value={fmtK(todayTotal)}
         bgNode={<DailyTokens records={records} />}
         subtextNode={
@@ -574,7 +575,7 @@ export default function StatsBar() {
           </div>
         }
         color="text-orange-500"
-        tooltip="最近24小时输入+输出+缓存 Token 合计"
+        tooltip="今日（自然日 00:00 至今）输入+输出+缓存 Token 合计"
       />
       <StatCard
         label="活跃时长"

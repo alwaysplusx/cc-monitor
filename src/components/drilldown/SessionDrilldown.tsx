@@ -276,7 +276,7 @@ ${params.map((p) => `${p.seriesName}: ${fmtK(p.value)}`).join('<br/>')}`
     <div className="space-y-5">
       {/* Session info header */}
       <div className="space-y-2">
-        <div className="text-sm text-[var(--foreground)]">{session.firstUserMessage}</div>
+        <div className="line-clamp-2 text-sm text-[var(--foreground)]" title={session.firstUserMessage}>{session.firstUserMessage}</div>
         <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-[var(--muted-foreground)]">
           <span title={session.sessionId}>
             ID: <span className="font-mono">{session.sessionId.slice(0, 12)}</span>
@@ -347,10 +347,13 @@ ${params.map((p) => `${p.seriesName}: ${fmtK(p.value)}`).join('<br/>')}`
 
       {/* Subagent relationships */}
       {subagents.length > 0 && (
-        <div>
-          <h3 className="mb-2 text-xs font-medium text-[var(--muted-foreground)]">
-            Subagent ({subagents.length})
-          </h3>
+        <details className="group">
+          <summary className="mb-2 cursor-pointer list-none text-xs font-medium text-[var(--muted-foreground)]">
+            <span className="inline-flex items-center gap-1">
+              <svg className="h-3 w-3 transition-transform group-open:rotate-90" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6" /></svg>
+              Subagent ({subagents.length})
+            </span>
+          </summary>
           <div className="space-y-1">
             {subagents.map((sub) => {
               const subTotal = sub.totalInput + sub.totalOutput + sub.totalCacheRead
@@ -373,7 +376,7 @@ ${params.map((p) => `${p.seriesName}: ${fmtK(p.value)}`).join('<br/>')}`
               )
             })}
           </div>
-        </div>
+        </details>
       )}
       {/* Turn detail panel */}
       {turnLoading && (

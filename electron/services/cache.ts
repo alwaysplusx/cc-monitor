@@ -8,7 +8,7 @@ interface CacheEntry {
   lastSize: number
   lastModified: number
   records: TokenRecord[]
-  lineCount: number
+  byteOffset: number
   userMessages: Map<string, string>
 }
 
@@ -41,9 +41,9 @@ export class FileCache {
       return existing.records
     }
 
-    // Incremental parse: file grew (new lines appended)
+    // Incremental parse: file grew (new bytes appended)
     if (existing && stat.size > existing.lastSize) {
-      const result = parseJsonlFile(filePath, existing.lineCount)
+      const result = parseJsonlFile(filePath, existing.byteOffset)
       const mergedRecords = [...existing.records, ...result.tokenRecords]
       const mergedMessages = new Map([...existing.userMessages, ...result.userMessages])
 
@@ -51,7 +51,7 @@ export class FileCache {
         lastSize: stat.size,
         lastModified: stat.mtimeMs,
         records: mergedRecords,
-        lineCount: this.estimateLineCount(filePath, existing.lineCount),
+        byteOffset: result.bytesRead,
         userMessages: mergedMessages,
       })
       return mergedRecords
@@ -63,7 +63,7 @@ export class FileCache {
       lastSize: stat.size,
       lastModified: stat.mtimeMs,
       records: result.tokenRecords,
-      lineCount: this.estimateLineCount(filePath, 0),
+      byteOffset: result.bytesRead,
       userMessages: result.userMessages,
     })
     return result.tokenRecords
@@ -153,14 +153,5 @@ export class FileCache {
       }
     }
     return merged
-  }
-
-  private estimateLineCount(filePath: string, fallback: number): number {
-    try {
-      const { countLines } = require('./parser') as typeof import('./parser')
-      return countLines(filePath)
-    } catch {
-      return fallback
-    }
   }
 }

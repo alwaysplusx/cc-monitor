@@ -37,10 +37,10 @@ export default function ProjectPie() {
       map.set(key, entry)
     }
 
-    const total = Array.from(map.values()).reduce((s, e) => s + e.input + e.output, 0)
+    const total = Array.from(map.values()).reduce((s, e) => s + e.input + e.output + e.cacheRead, 0)
     const all: ProjectUsage[] = Array.from(map.entries())
       .map(([path, e]) => {
-        const t = e.input + e.output
+        const t = e.input + e.output + e.cacheRead
         const name = path.split(/[/\\]/).pop() || path
         return { path, name, input: e.input, output: e.output, cacheRead: e.cacheRead, total: t, percentage: total > 0 ? (t / total) * 100 : 0 }
       })
@@ -70,6 +70,9 @@ export default function ProjectPie() {
     const data = chartProjects.map((p, i) => ({
       name: p.name,
       value: p.total,
+      input: p.input,
+      output: p.output,
+      cacheRead: p.cacheRead,
       itemStyle: { color: PROJECT_COLORS[i % PROJECT_COLORS.length] },
     }))
 
@@ -77,10 +80,16 @@ export default function ProjectPie() {
       backgroundColor: 'transparent',
       tooltip: {
         ...themeObj.tooltip,
+        confine: false,
+        appendToBody: true,
         formatter: (params: unknown) => {
-          const p = params as { name: string; value: number }
+          const p = params as { name: string; value: number; data: { input: number; output: number; cacheRead: number } }
           const pct = totalTokens > 0 ? ((p.value / totalTokens) * 100).toFixed(1) : '0'
-          return `${p.name}<br/>${fmtK(p.value)} (${pct}%)`
+          return `<b>${p.name}</b> (${pct}%)<br/>`
+            + `输入: ${fmtK(p.data.input)}<br/>`
+            + `输出: ${fmtK(p.data.output)}<br/>`
+            + `缓存: ${fmtK(p.data.cacheRead)}<br/>`
+            + `合计: ${fmtK(p.value)}`
         },
       },
       series: [

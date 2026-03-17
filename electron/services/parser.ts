@@ -1,19 +1,41 @@
 // JSONL incremental parser for extracting token records from Claude Code logs
-import { readFileSync } from 'fs'
+import { readFileSync, openSync, readSync, fstatSync, closeSync } from 'fs'
 import type { RawRecord, TokenRecord } from '../../src/types/data'
 
 export interface ParseResult {
   tokenRecords: TokenRecord[]
   userMessages: Map<string, string> // sessionId → first user text message
   turnDurations: Map<string, number[]> // sessionId → durationMs values
+  bytesRead: number // total bytes consumed (for byte-offset tracking)
 }
 
 /**
  * Parse a JSONL file and extract token records, user messages, and turn durations.
- * Supports incremental parsing by skipping the first `startLine` lines.
+ * Supports incremental parsing by reading from `byteOffset` onwards.
  */
-export function parseJsonlFile(filePath: string, startLine = 0): ParseResult {
-  const content = readFileSync(filePath, 'utf-8')
+export function parseJsonlFile(filePath: string, byteOffset = 0): ParseResult {
+  let content: string
+
+  if (byteOffset > 0) {
+    // Incremental: read only from byteOffset to end of file
+    const fd = openSync(filePath, 'r')
+    try {
+      const stat = fstatSync(fd)
+      const remaining = stat.size - byteOffset
+      if (remaining <= 0) {
+        return { tokenRecords: [], userMessages: new Map(), turnDurations: new Map(), bytesRead: stat.size }
+      }
+      const buf = Buffer.alloc(remaining)
+      readSync(fd, buf, 0, remaining, byteOffset)
+      content = buf.toString('utf-8')
+    } finally {
+      closeSync(fd)
+    }
+  } else {
+    content = readFileSync(filePath, 'utf-8')
+  }
+
+  const totalBytesRead = byteOffset + Buffer.byteLength(content, 'utf-8')
   const lines = content.split('\n')
 
   const tokenRecords: TokenRecord[] = []
@@ -21,7 +43,7 @@ export function parseJsonlFile(filePath: string, startLine = 0): ParseResult {
   const turnDurations = new Map<string, number[]>()
   const fileName = filePath
 
-  for (let i = startLine; i < lines.length; i++) {
+  for (let i = 0; i < lines.length; i++) {
     const line = lines[i].trim()
     if (!line) continue
 
@@ -86,13 +108,5 @@ export function parseJsonlFile(filePath: string, startLine = 0): ParseResult {
     }
   }
 
-  return { tokenRecords, userMessages, turnDurations }
-}
-
-/**
- * Count total lines in a file (for incremental parsing tracking).
- */
-export function countLines(filePath: string): number {
-  const content = readFileSync(filePath, 'utf-8')
-  return content.split('\n').length
+  return { tokenRecords, userMessages, turnDurations, bytesRead: totalBytesRead }
 }

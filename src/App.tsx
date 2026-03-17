@@ -58,7 +58,7 @@ function App(): React.JSX.Element {
             <div className="flex flex-col overflow-hidden rounded-lg border border-[var(--border)] bg-[var(--card)] p-3">
               <ModelPie />
             </div>
-            <div className="flex flex-col overflow-hidden rounded-lg border border-[var(--border)] bg-[var(--card)] p-3">
+            <div className="flex flex-col rounded-lg border border-[var(--border)] bg-[var(--card)] p-3">
               <ProjectPie />
             </div>
           </div>

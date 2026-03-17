@@ -149,7 +149,7 @@ export interface FileCacheEntry {
   lastSize: number
   lastModified: number
   records: TokenRecord[]
-  lineCount: number
+  byteOffset: number
 }
 
 // Model switch event
