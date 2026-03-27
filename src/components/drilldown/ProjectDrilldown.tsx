@@ -20,8 +20,12 @@ export default function ProjectDrilldown({ projectPath }: { projectPath: string 
   const splitLineColor = isDark ? '#151d2e' : '#f1f5f9'
   const axisLineColor = isDark ? '#1e293b' : '#e2e8f0'
 
+  // Include records from subdirectories (prefix match)
   const projectRecords = useMemo(
-    () => records.filter((r) => r.projectPath === projectPath),
+    () =>
+      records.filter(
+        (r) => r.projectPath === projectPath || r.projectPath.startsWith(projectPath + '/'),
+      ),
     [records, projectPath],
   )
 
@@ -33,8 +37,14 @@ export default function ProjectDrilldown({ projectPath }: { projectPath: string 
   const totalTokens = totalInput + totalOutput + totalCache
 
   // Session count
+  // Include sessions from subdirectories (prefix match)
   const projectSessions = useMemo(
-    () => sessionSummaries.filter((s) => !s.isSubagent && s.projectPath === projectPath),
+    () =>
+      sessionSummaries.filter(
+        (s) =>
+          !s.isSubagent &&
+          (s.projectPath === projectPath || s.projectPath.startsWith(projectPath + '/')),
+      ),
     [sessionSummaries, projectPath],
   )
 

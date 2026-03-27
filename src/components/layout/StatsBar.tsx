@@ -1,10 +1,71 @@
 // Top statistics cards row: input/output/cache tokens, requests, active duration
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { useDataStore } from '../../stores/dataStore'
 import { fmtK, fmtN, fmtDuration } from '../../lib/format'
 import { cn } from '../../lib/utils'
 import { getModelPricing } from '../../lib/constants'
 import { useSettingsStore } from '../../stores/settingsStore'
+
+type TimeRange = 'today' | 'week' | 'month' | 'all'
+const TIME_RANGE_LABELS: Record<TimeRange, string> = {
+  today: '今日',
+  week: '本周',
+  month: '本月',
+  all: '全部',
+}
+
+/** Get the start timestamp for a given time range */
+function getTimeRangeStart(range: TimeRange): Date | null {
+  if (range === 'all') return null
+  const d = new Date()
+  if (range === 'today') {
+    d.setHours(0, 0, 0, 0)
+  } else if (range === 'week') {
+    const day = d.getDay()
+    d.setDate(d.getDate() - (day === 0 ? 6 : day - 1)) // Monday as week start
+    d.setHours(0, 0, 0, 0)
+  } else if (range === 'month') {
+    d.setDate(1)
+    d.setHours(0, 0, 0, 0)
+  }
+  return d
+}
+
+/** Get the equivalent previous period start for D-1 comparison */
+function getPrevPeriodRange(range: TimeRange): { start: Date; end: Date } | null {
+  if (range === 'all') return null
+  const now = new Date()
+  const start = new Date()
+  const end = new Date()
+  if (range === 'today') {
+    start.setDate(now.getDate() - 1)
+    start.setHours(0, 0, 0, 0)
+    end.setDate(now.getDate() - 1)
+    end.setHours(23, 59, 59, 999)
+  } else if (range === 'week') {
+    const day = now.getDay()
+    const mondayOffset = day === 0 ? 6 : day - 1
+    start.setDate(now.getDate() - mondayOffset - 7)
+    start.setHours(0, 0, 0, 0)
+    end.setDate(now.getDate() - mondayOffset - 1)
+    end.setHours(23, 59, 59, 999)
+  } else if (range === 'month') {
+    start.setMonth(now.getMonth() - 1, 1)
+    start.setHours(0, 0, 0, 0)
+    end.setMonth(now.getMonth(), 0) // last day of prev month
+    end.setHours(23, 59, 59, 999)
+  }
+  return { start, end }
+}
+
+/** Format comparison percentage */
+function CompareTag({ current, previous }: { current: number; previous: number }) {
+  if (previous <= 0) return <span className="text-[var(--muted-foreground)]">-</span>
+  const diff = ((current - previous) / previous) * 100
+  const arrow = diff >= 0 ? '↑' : '↓'
+  const cls = diff >= 0 ? 'text-green-400' : 'text-rose-400'
+  return <span className={cls}>{arrow}{Math.abs(diff).toFixed(0)}%</span>
+}
 
 /** SVG sparkline — thin line + gradient fill for 7-day trend */
 function Sparkline({ data, color }: { data: number[]; color: string }) {
@@ -329,20 +390,41 @@ function CostDonut({ segments }: { segments: { value: number; color: string; lab
 export default function StatsBar() {
   const records = useDataStore((s) => s.tokenRecords)
   const dayBuckets = useDataStore((s) => s.dayBuckets)
+  const hourBuckets = useDataStore((s) => s.hourBuckets)
+  const monthBuckets = useDataStore((s) => s.monthBuckets)
   const openDrilldown = useDataStore((s) => s.openDrilldown)
   const modelPricing = useSettingsStore((s) => s.modelPricing)
+  const [timeRange, setTimeRange] = useState<TimeRange>('today')
 
-  const totalInput = records.reduce((s, r) => s + r.inputTokens, 0)
-  const totalOutput = records.reduce((s, r) => s + r.outputTokens, 0)
-  const totalCacheRead = records.reduce((s, r) => s + r.cacheReadTokens, 0)
-  const requestCount = records.length
+  // Filter records by selected time range
+  const rangeStart = useMemo(() => getTimeRangeStart(timeRange), [timeRange])
+  const filteredRecords = useMemo(
+    () => (rangeStart ? records.filter((r) => r.timestamp >= rangeStart) : records),
+    [records, rangeStart],
+  )
 
-  // Estimated cost by model pricing
+  // Previous period records for comparison
+  const prevRecords = useMemo(() => {
+    const prev = getPrevPeriodRange(timeRange)
+    if (!prev) return []
+    return records.filter((r) => r.timestamp >= prev.start && r.timestamp <= prev.end)
+  }, [records, timeRange])
+
+  const totalInput = filteredRecords.reduce((s, r) => s + r.inputTokens, 0)
+  const totalOutput = filteredRecords.reduce((s, r) => s + r.outputTokens, 0)
+  const totalCacheRead = filteredRecords.reduce((s, r) => s + r.cacheReadTokens, 0)
+  const requestCount = filteredRecords.length
+
+  const prevInput = prevRecords.reduce((s, r) => s + r.inputTokens, 0)
+  const prevOutput = prevRecords.reduce((s, r) => s + r.outputTokens, 0)
+  const prevCacheRead = prevRecords.reduce((s, r) => s + r.cacheReadTokens, 0)
+
+  // Estimated cost by model pricing (filtered)
   const cost = useMemo(() => {
     let inputCost = 0
     let outputCost = 0
     let cacheCost = 0
-    for (const r of records) {
+    for (const r of filteredRecords) {
       const pricing = getModelPricing(r.model, modelPricing)
       inputCost += (r.inputTokens / 1_000_000) * pricing.input
       outputCost += (r.outputTokens / 1_000_000) * pricing.output
@@ -350,13 +432,66 @@ export default function StatsBar() {
     }
     const total = inputCost + outputCost + cacheCost
     return { inputCost, outputCost, cacheCost, total }
-  }, [records, modelPricing])
+  }, [filteredRecords, modelPricing])
 
-  // Last 7 days sparkline data
+  // Previous period cost for comparison
+  const prevCost = useMemo(() => {
+    let total = 0
+    for (const r of prevRecords) {
+      const pricing = getModelPricing(r.model, modelPricing)
+      total += (r.inputTokens / 1_000_000) * pricing.input
+      total += (r.outputTokens / 1_000_000) * pricing.output
+      total += (r.cacheReadTokens / 1_000_000) * pricing.cacheRead
+    }
+    return total
+  }, [prevRecords, modelPricing])
+
+  // Sparkline data adapted to time range
   const spark = useMemo(() => {
+    if (timeRange === 'today') {
+      // Today: 24 hourly points
+      const todayStr = localDateStr(new Date())
+      const bucketMap = new Map(hourBuckets.map((b) => [b.hour, b]))
+      const hours: string[] = []
+      for (let i = 0; i < 24; i++) {
+        hours.push(`${todayStr}T${String(i).padStart(2, '0')}`)
+      }
+      return {
+        input: hours.map((h) => bucketMap.get(h)?.input ?? 0),
+        output: hours.map((h) => bucketMap.get(h)?.output ?? 0),
+        cache: hours.map((h) => bucketMap.get(h)?.cacheRead ?? 0),
+        requests: hours.map((h) => bucketMap.get(h)?.requestCount ?? 0),
+        total: hours.map((h) => {
+          const b = bucketMap.get(h)
+          return b ? b.input + b.output + b.cacheRead : 0
+        }),
+      }
+    }
+    if (timeRange === 'all') {
+      // All: 12 monthly points
+      const today = new Date()
+      const months: string[] = []
+      for (let i = 11; i >= 0; i--) {
+        const d = new Date(today.getFullYear(), today.getMonth() - i, 1)
+        months.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`)
+      }
+      const bucketMap = new Map(monthBuckets.map((b) => [b.month, b]))
+      return {
+        input: months.map((m) => bucketMap.get(m)?.input ?? 0),
+        output: months.map((m) => bucketMap.get(m)?.output ?? 0),
+        cache: months.map((m) => bucketMap.get(m)?.cacheRead ?? 0),
+        requests: months.map((m) => bucketMap.get(m)?.requestCount ?? 0),
+        total: months.map((m) => {
+          const b = bucketMap.get(m)
+          return b ? b.input + b.output + b.cacheRead : 0
+        }),
+      }
+    }
+    // Week / Month: use day buckets
     const today = new Date()
+    const numDays = timeRange === 'week' ? 7 : 30
     const days: string[] = []
-    for (let i = 6; i >= 0; i--) {
+    for (let i = numDays - 1; i >= 0; i--) {
       const d = new Date(today)
       d.setDate(d.getDate() - i)
       days.push(d.toISOString().slice(0, 10))
@@ -372,12 +507,25 @@ export default function StatsBar() {
         return b ? b.input + b.output + b.cacheRead : 0
       }),
     }
-  }, [dayBuckets])
+  }, [dayBuckets, hourBuckets, monthBuckets, timeRange])
 
-  // Cache hit rate
-  const cacheHitRate = totalInput + totalCacheRead > 0
-    ? (totalCacheRead / (totalInput + totalCacheRead)) * 100
-    : 0
+  // Comparison label for tooltip
+  const compareLabel = timeRange === 'today' ? '昨日' : timeRange === 'week' ? '上周' : timeRange === 'month' ? '上月' : ''
+
+  // Total cost across all records (for "累计花费" card)
+  const totalCost = useMemo(() => {
+    let total = 0
+    for (const r of records) {
+      const pricing = getModelPricing(r.model, modelPricing)
+      total += (r.inputTokens / 1_000_000) * pricing.input
+      total += (r.outputTokens / 1_000_000) * pricing.output
+      total += (r.cacheReadTokens / 1_000_000) * pricing.cacheRead
+    }
+    return total
+  }, [records, modelPricing])
+
+  // Previous period request count for comparison
+  const prevRequestCount = prevRecords.length
 
   // Recent N hours stats (configurable)
   const recentHours = useSettingsStore((s) => s.recentHours)
@@ -388,13 +536,7 @@ export default function StatsBar() {
   const recentCache = recent.reduce((s, r) => s + r.cacheReadTokens, 0)
   const recentTotal = recentInput + recentOutput + recentCache
 
-  // Today's consumption (natural day: 00:00 to now)
-  const todayStart = new Date()
-  todayStart.setHours(0, 0, 0, 0)
-  const todayRecords = records.filter((r) => r.timestamp >= todayStart)
-  const todayTotal = todayRecords.reduce((s, r) => s + r.inputTokens + r.outputTokens + r.cacheReadTokens, 0)
-  const todayRequests = todayRecords.length
-  // Recent days for comparison
+  // Recent days for comparison (used in second row)
   const recentDays = useMemo(() => {
     const bucketMap = new Map(dayBuckets.map((b) => [b.day, b]))
     return [1, 2].map((offset) => {
@@ -408,17 +550,15 @@ export default function StatsBar() {
       return { label, total, requests }
     })
   }, [dayBuckets])
-  const yesterdayTotal = recentDays[0].total
-  const yesterdayRequests = recentDays[0].requests
 
-  // Hourly request density (24 hours)
+  // Hourly request density (follows time range filter)
   const hourDensity = useMemo(() => {
     const hours = new Array(24).fill(0)
-    for (const r of records) {
+    for (const r of filteredRecords) {
       hours[r.timestamp.getHours()]++
     }
     return hours
-  }, [records])
+  }, [filteredRecords])
 
   // Calculate active duration: from first to last record timestamp
   const timestamps = records.map((r) => r.timestamp.getTime()).filter((t) => t > 0)
@@ -427,34 +567,80 @@ export default function StatsBar() {
 
   return (
     <>
-    <div className="grid grid-cols-4 gap-3 px-4 pt-4">
+    <div className="flex items-center gap-1.5 px-4 pt-4 pb-2">
+      {(Object.keys(TIME_RANGE_LABELS) as TimeRange[]).map((key) => (
+        <button
+          key={key}
+          className={cn(
+            'rounded-md px-2.5 py-1 text-xs font-medium transition-colors',
+            timeRange === key
+              ? 'bg-[var(--primary)] text-[var(--primary-foreground)]'
+              : 'text-[var(--muted-foreground)] hover:bg-[var(--muted)] hover:text-[var(--foreground)]',
+          )}
+          onClick={() => setTimeRange(key)}
+        >
+          {TIME_RANGE_LABELS[key]}
+        </button>
+      ))}
+    </div>
+    <div className="grid grid-cols-4 gap-3 px-4">
       <StatCard
         label="输入 Token"
         value={fmtK(totalInput)}
-        subtext={fmtN(totalInput)}
+        subtextNode={
+          <div className="flex items-baseline gap-2 text-xs">
+            <span className="text-[var(--muted-foreground)]">{fmtN(totalInput)}</span>
+            {timeRange !== 'all' && (
+              <>
+                <span className="text-[var(--border)]">|</span>
+                <CompareTag current={totalInput} previous={prevInput} />
+              </>
+            )}
+          </div>
+        }
         color="text-blue-500"
         sparkData={spark.input}
         sparkColor="#3b82f6"
-        tooltip="发送给模型的 Token 总量（所有项目累计）"
+        tooltip={`${TIME_RANGE_LABELS[timeRange]}发送给模型的 Token 量${compareLabel ? `（vs ${compareLabel}）` : ''}`}
         tooltipAlign="left"
       />
       <StatCard
         label="输出 Token"
         value={fmtK(totalOutput)}
-        subtext={fmtN(totalOutput)}
+        subtextNode={
+          <div className="flex items-baseline gap-2 text-xs">
+            <span className="text-[var(--muted-foreground)]">{fmtN(totalOutput)}</span>
+            {timeRange !== 'all' && (
+              <>
+                <span className="text-[var(--border)]">|</span>
+                <CompareTag current={totalOutput} previous={prevOutput} />
+              </>
+            )}
+          </div>
+        }
         color="text-purple-500"
         sparkData={spark.output}
         sparkColor="#8b5cf6"
-        tooltip="模型生成的 Token 总量（所有项目累计）"
+        tooltip={`${TIME_RANGE_LABELS[timeRange]}模型生成的 Token 量${compareLabel ? `（vs ${compareLabel}）` : ''}`}
       />
       <StatCard
         label="缓存读取"
         value={fmtK(totalCacheRead)}
-        subtext={fmtN(totalCacheRead)}
+        subtextNode={
+          <div className="flex items-baseline gap-2 text-xs">
+            <span className="text-[var(--muted-foreground)]">{fmtN(totalCacheRead)}</span>
+            {timeRange !== 'all' && (
+              <>
+                <span className="text-[var(--border)]">|</span>
+                <CompareTag current={totalCacheRead} previous={prevCacheRead} />
+              </>
+            )}
+          </div>
+        }
         color="text-cyan-500"
         sparkData={spark.cache}
         sparkColor="#06b6d4"
-        tooltip="从缓存中读取的 Token 总量，不计入实际消耗"
+        tooltip={`${TIME_RANGE_LABELS[timeRange]}从缓存中读取的 Token 量`}
       />
       <StatCard
         label="预估花费"
@@ -466,6 +652,12 @@ export default function StatsBar() {
             <span className="font-mono font-semibold text-purple-500">${cost.outputCost.toFixed(2)}</span>
             <span className="text-[var(--muted-foreground)]">/</span>
             <span className="font-mono font-semibold text-cyan-500">${cost.cacheCost.toFixed(2)}</span>
+            {timeRange !== 'all' && (
+              <>
+                <span className="text-[var(--border)]">|</span>
+                <CompareTag current={cost.total} previous={prevCost} />
+              </>
+            )}
           </div>
         }
         rightNode={
@@ -491,7 +683,7 @@ export default function StatsBar() {
           </div>
         }
         color="text-emerald-500"
-        tooltip="根据各模型的官方 API 定价估算总花费（输入+输出+缓存读取）"
+        tooltip={`${TIME_RANGE_LABELS[timeRange]}根据官方 API 定价估算花费`}
         onClick={() => openDrilldown('cost')}
       />
     </div>
@@ -502,29 +694,25 @@ export default function StatsBar() {
         bgNode={<HourDensity data={hourDensity} />}
         subtextNode={
           <div className="flex items-baseline gap-x-2 text-xs">
-            <span className="whitespace-nowrap text-[var(--muted-foreground)]">
-              {yesterdayRequests > 0
-                ? (() => {
-                    const diff = ((todayRequests - yesterdayRequests) / yesterdayRequests) * 100
-                    const arrow = diff >= 0 ? '↑' : '↓'
-                    const cls = diff >= 0 ? 'text-green-400' : 'text-rose-400'
-                    return <><span className={cls}>{arrow}{Math.abs(diff).toFixed(0)}%</span></>
-                  })()
-                : '-'}
-            </span>
-            {recentDays.map((d, i) => (
-              <span key={i} className="flex items-baseline gap-x-2">
-                <span className="text-[var(--border)]">|</span>
-                <span className="whitespace-nowrap font-mono text-[var(--muted-foreground)]">
-                  <span className="opacity-60">{d.label}</span>{' '}
-                  <span>{d.requests}</span>
-                </span>
-              </span>
-            ))}
+            {timeRange !== 'all' ? (
+              <CompareTag current={requestCount} previous={prevRequestCount} />
+            ) : (
+              <>
+                {recentDays.map((d, i) => (
+                  <span key={i} className="flex items-baseline gap-x-2">
+                    {i > 0 && <span className="text-[var(--border)]">|</span>}
+                    <span className="whitespace-nowrap font-mono text-[var(--muted-foreground)]">
+                      <span className="opacity-60">{d.label}</span>{' '}
+                      <span>{d.requests}</span>
+                    </span>
+                  </span>
+                ))}
+              </>
+            )}
           </div>
         }
         color="text-green-500"
-        tooltip="所有项目的 API 请求次数累计"
+        tooltip={`${TIME_RANGE_LABELS[timeRange]} API 请求次数`}
         tooltipAlign="left"
         onClick={() => openDrilldown('usage-pattern')}
       />
@@ -547,35 +735,23 @@ export default function StatsBar() {
         tooltip={`最近${recentHours}小时的输入+输出+缓存 Token 合计`}
       />
       <StatCard
-        label="今日"
-        value={fmtK(todayTotal)}
+        label="累计花费"
+        value={`$${totalCost.toFixed(2)}`}
         bgNode={<DailyTokens records={records} />}
         subtextNode={
           <div className="flex items-baseline gap-x-2 text-xs">
-            <span className="whitespace-nowrap text-[var(--muted-foreground)]">
-              {yesterdayTotal > 0
-                ? (() => {
-                    const diff = ((todayTotal - yesterdayTotal) / yesterdayTotal) * 100
-                    const arrow = diff >= 0 ? '↑' : '↓'
-                    const cls = diff >= 0 ? 'text-green-400' : 'text-rose-400'
-                    return <><span className={cls}>{arrow}{Math.abs(diff).toFixed(0)}%</span></>
-                  })()
-                : '-'}
+            <span className="whitespace-nowrap font-mono text-[var(--muted-foreground)]">
+              {records.length} 次请求
             </span>
             <span className="text-[var(--border)]">|</span>
-            {recentDays.map((d, i) => (
-              <span key={i} className="flex items-baseline gap-x-2">
-                <span className="text-[var(--border)]">|</span>
-                <span className="whitespace-nowrap font-mono text-[var(--muted-foreground)]">
-                  <span className="opacity-60">{d.label}</span>{' '}
-                  <span>{fmtK(d.total)}</span>
-                </span>
-              </span>
-            ))}
+            <span className="whitespace-nowrap font-mono text-[var(--muted-foreground)]">
+              {fmtK(records.reduce((s, r) => s + r.inputTokens + r.outputTokens + r.cacheReadTokens, 0))} tokens
+            </span>
           </div>
         }
         color="text-orange-500"
-        tooltip="今日（自然日 00:00 至今）输入+输出+缓存 Token 合计"
+        tooltip="所有历史记录的预估总花费"
+        onClick={() => openDrilldown('cost')}
       />
       <StatCard
         label="活跃时长"

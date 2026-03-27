@@ -73,6 +73,7 @@ export default function ProjectPie() {
       input: p.input,
       output: p.output,
       cacheRead: p.cacheRead,
+      projectPath: p.path,
       itemStyle: { color: PROJECT_COLORS[i % PROJECT_COLORS.length] },
     }))
 
@@ -128,19 +129,13 @@ export default function ProjectPie() {
     }
   }, [chartProjects, totalTokens, isDark])
 
-  const nameToPath = useMemo(() => {
-    const map = new Map<string, string>()
-    for (const p of allProjects) map.set(p.name, p.path)
-    return map
-  }, [allProjects])
-
   const onChartClick = useCallback(
-    (params: { name: string }) => {
+    (params: { name: string; data?: { projectPath?: string } }) => {
       if (params.name === '其他') return
-      const path = nameToPath.get(params.name)
+      const path = params.data?.projectPath
       if (path) openDrilldown('project', { projectPath: path })
     },
-    [openDrilldown, nameToPath],
+    [openDrilldown],
   )
 
   const hasData = allProjects.length > 0
