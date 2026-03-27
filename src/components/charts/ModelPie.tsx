@@ -23,7 +23,7 @@ export default function ModelPie() {
   )
 
   const totalTokens = useMemo(
-    () => modelSummaries.reduce((s, m) => s + m.totalInput + m.totalOutput, 0),
+    () => modelSummaries.reduce((s, m) => s + m.totalInput + m.totalOutput + m.totalCacheRead, 0),
     [modelSummaries],
   )
 
@@ -31,7 +31,7 @@ export default function ModelPie() {
     const themeObj = isDark ? echartsDarkTheme : echartsLightTheme
     const data = modelSummaries.map((m, i) => ({
       name: m.model,
-      value: m.totalInput + m.totalOutput,
+      value: m.totalInput + m.totalOutput + m.totalCacheRead,
       itemStyle: { color: MODEL_COLORS[i % MODEL_COLORS.length] },
     }))
 
@@ -118,7 +118,7 @@ export default function ModelPie() {
                 />
                 <span className="flex-1 truncate text-[var(--foreground)]">{m.model}</span>
                 <span className="font-mono text-[var(--muted-foreground)]">
-                  {fmtK(m.totalInput + m.totalOutput)}
+                  {fmtK(m.totalInput + m.totalOutput + m.totalCacheRead)}
                 </span>
                 <span className="w-10 text-right font-mono text-[var(--muted-foreground)]">
                   {m.percentage.toFixed(0)}%

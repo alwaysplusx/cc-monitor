@@ -358,20 +358,31 @@ ${params.map((p) => `${p.seriesName}: ${fmtK(p.value)}`).join('<br/>')}`
             {subagents.map((sub) => {
               const subTotal = sub.totalInput + sub.totalOutput + sub.totalCacheRead
               const pct = totalTokens > 0 ? ((subTotal / totalTokens) * 100).toFixed(1) : '0'
+              const hasTask = sub.firstUserMessage && sub.firstUserMessage !== sub.sessionId.slice(0, 12)
               return (
                 <div
                   key={sub.id}
-                  className="flex items-center gap-2 rounded-md border border-[var(--border)] px-3 py-2 text-xs"
+                  className="rounded-md border border-[var(--border)] px-3 py-2 text-xs"
                 >
-                  <span className="rounded bg-purple-500/20 px-1 py-0.5 text-[10px] text-purple-400">
-                    subagent
-                  </span>
-                  <span className="min-w-0 flex-1 truncate font-mono text-[var(--muted-foreground)]">
-                    {sub.agentId.slice(0, 16)}
-                  </span>
-                  <span className="text-green-500">{sub.requestCount}次</span>
-                  <span className="font-mono">{fmtK(subTotal)}</span>
-                  <span className="text-[var(--muted-foreground)]">{pct}%</span>
+                  <div className="flex items-center gap-2">
+                    <span className="rounded bg-purple-500/20 px-1 py-0.5 text-[10px] text-purple-400">
+                      subagent
+                    </span>
+                    <span className="min-w-0 flex-1 truncate font-mono text-[var(--muted-foreground)]">
+                      {sub.agentId.slice(0, 16)}
+                    </span>
+                    <span className="text-green-500">{sub.requestCount}次</span>
+                    <span className="font-mono">{fmtK(subTotal)}</span>
+                    <span className="text-[var(--muted-foreground)]">{pct}%</span>
+                  </div>
+                  {hasTask && (
+                    <div
+                      className="mt-1.5 line-clamp-2 text-[11px] leading-relaxed text-[var(--foreground)] opacity-80"
+                      title={sub.firstUserMessage}
+                    >
+                      {sub.firstUserMessage}
+                    </div>
+                  )}
                 </div>
               )
             })}

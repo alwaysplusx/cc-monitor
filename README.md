@@ -98,3 +98,5 @@ Please ensure your code passes `pnpm lint` and `pnpm typecheck` before submittin
 ## License
 
 [MIT](LICENSE)
+
+love from https://claude.ai/code
