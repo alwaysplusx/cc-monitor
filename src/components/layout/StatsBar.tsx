@@ -629,6 +629,13 @@ export default function StatsBar() {
         subtextNode={
           <div className="flex items-baseline gap-2 text-xs">
             <span className="text-[var(--muted-foreground)]">{fmtN(totalCacheRead)}</span>
+            <span className="text-[var(--border)]">|</span>
+            <span className="font-mono font-semibold text-cyan-500">
+              {totalCacheRead + totalInput > 0
+                ? `${((totalCacheRead / (totalCacheRead + totalInput)) * 100).toFixed(1)}%`
+                : '0%'}
+            </span>
+            <span className="text-[10px] text-[var(--muted-foreground)]">命中率</span>
             {timeRange !== 'all' && (
               <>
                 <span className="text-[var(--border)]">|</span>
@@ -640,7 +647,7 @@ export default function StatsBar() {
         color="text-cyan-500"
         sparkData={spark.cache}
         sparkColor="#06b6d4"
-        tooltip={`${TIME_RANGE_LABELS[timeRange]}从缓存中读取的 Token 量`}
+        tooltip={`${TIME_RANGE_LABELS[timeRange]}从缓存中读取的 Token 量。命中率 = 缓存读取 / (缓存读取 + 输入)`}
       />
       <StatCard
         label="预估花费"
