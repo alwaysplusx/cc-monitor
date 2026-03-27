@@ -560,10 +560,18 @@ export default function StatsBar() {
     return hours
   }, [filteredRecords])
 
-  // Calculate active duration: from first to last record timestamp
-  const timestamps = records.map((r) => r.timestamp.getTime()).filter((t) => t > 0)
-  const activeDurationMs =
-    timestamps.length > 1 ? Math.max(...timestamps) - Math.min(...timestamps) : 0
+  // Calculate active duration: sum of active segments (gap > 5min = inactive)
+  const ACTIVE_GAP_MS = 5 * 60 * 1000
+  const timestamps = records.map((r) => r.timestamp.getTime()).filter((t) => t > 0).sort((a, b) => a - b)
+  const activeDurationMs = useMemo(() => {
+    if (timestamps.length < 2) return 0
+    let total = 0
+    for (let i = 1; i < timestamps.length; i++) {
+      const gap = timestamps[i] - timestamps[i - 1]
+      if (gap <= ACTIVE_GAP_MS) total += gap
+    }
+    return total
+  }, [timestamps.length > 0 ? timestamps[0] : 0, timestamps.length > 0 ? timestamps[timestamps.length - 1] : 0, timestamps.length])
 
   return (
     <>
@@ -777,7 +785,7 @@ export default function StatsBar() {
             })()
           : '暂无数据'}
         color="text-amber-500"
-        tooltip="最早记录到最新记录的时间跨度（非实际使用时长）"
+        tooltip="活跃使用时长（相邻请求间隔超过5分钟视为不活跃）"
       />
     </div>
     </>
