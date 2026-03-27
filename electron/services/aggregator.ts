@@ -259,7 +259,10 @@ export function aggregateBySession(
       sessionFilePath: first.fileName,
       firstTimestamp: first.timestamp,
       lastTimestamp: last.timestamp,
-      firstUserMessage: userMessages.get(first.sessionId) || first.sessionId.slice(0, 12),
+      firstUserMessage:
+        (first.isSubagent
+          ? userMessages.get(`${first.sessionId}:${first.agentId}`)
+          : userMessages.get(first.sessionId)) || first.sessionId.slice(0, 12),
       totalInput: group.reduce((s, r) => s + r.inputTokens, 0),
       totalOutput: group.reduce((s, r) => s + r.outputTokens, 0),
       totalCacheRead: group.reduce((s, r) => s + r.cacheReadTokens, 0),

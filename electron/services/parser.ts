@@ -55,15 +55,19 @@ export function parseJsonlFile(filePath: string, byteOffset = 0): ParseResult {
       continue
     }
 
-    // Extract user plain text messages (for session titles)
+    // Extract user plain text messages (for session/subagent titles)
     if (record.type === 'user' && record.message?.content) {
+      // Use sessionId:agentId as key for subagents, sessionId for main sessions
+      const msgKey = record.agentId
+        ? `${record.sessionId}:${record.agentId}`
+        : record.sessionId
       const content = record.message.content
-      if (typeof content === 'string' && !userMessages.has(record.sessionId)) {
-        userMessages.set(record.sessionId, content)
+      if (typeof content === 'string' && !userMessages.has(msgKey)) {
+        userMessages.set(msgKey, content)
       } else if (Array.isArray(content)) {
         const textBlock = content.find((b) => b.type === 'text')
-        if (textBlock && 'text' in textBlock && !userMessages.has(record.sessionId)) {
-          userMessages.set(record.sessionId, textBlock.text)
+        if (textBlock && 'text' in textBlock && !userMessages.has(msgKey)) {
+          userMessages.set(msgKey, textBlock.text)
         }
       }
     }
