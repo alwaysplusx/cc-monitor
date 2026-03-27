@@ -203,14 +203,17 @@ export function aggregateByModel(records: TokenRecord[]): ModelSummary[] {
   }
 
   const totalTokens = Array.from(modelMap.values()).reduce(
-    (sum, m) => sum + m.totalInput + m.totalOutput,
+    (sum, m) => sum + m.totalInput + m.totalOutput + m.totalCacheRead,
     0,
   )
 
   return Array.from(modelMap.values())
     .map((m) => ({
       ...m,
-      percentage: totalTokens > 0 ? ((m.totalInput + m.totalOutput) / totalTokens) * 100 : 0,
+      percentage:
+        totalTokens > 0
+          ? ((m.totalInput + m.totalOutput + m.totalCacheRead) / totalTokens) * 100
+          : 0,
     }))
     .sort((a, b) => b.percentage - a.percentage)
 }
