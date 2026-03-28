@@ -15,7 +15,7 @@
     "typecheck": "npm run typecheck:node && npm run typecheck:web",
     "cli": "tsx cli/index.ts",
     "cli:all": "tsx cli/index.ts --all",
-    "cli:build": "esbuild cli/index.ts --bundle --platform=node --target=node18 --format=cjs --banner:js='#!/usr/bin/env node' --outfile=cli/dist/cc-dash.js && chmod +x cli/dist/cc-dash.js"
+    "cli:build": "esbuild cli/index.ts --bundle --platform=node --target=node18 --format=cjs --banner:js=\"#!/usr/bin/env node\" --outfile=cli/dist/cc-dash.js"
   },
   "dependencies": {
     "@electron-toolkit/preload": "^3.0.1",

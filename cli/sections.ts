@@ -1,27 +1,18 @@
-// Dashboard section renderers — each returns an array of plain strings (with ANSI codes)
-import type { TokenRecord, ModelSummary, SessionSummary, HourBucket } from '../src/types/data'
+// Dashboard section renderers — dual-column bordered layout
+import type { TokenRecord, SessionSummary, HourBucket } from '../src/types/data'
 import type { ModelPricingConfig } from '../src/types/ipc'
 import { getModelPricing } from '../src/lib/constants'
 import { fmtK, fmtDuration } from '../src/lib/format'
-import { bold, dim, cyan, green, red, magenta, blue, yellow, padRight, padLeft, truncate, progressBar, sparkline } from './ansi'
+import {
+  bold, dim, cyan, green, yellow, magenta,
+  padRight, padLeft, truncate, sparkline,
+  borderTop, borderBottom, borderMid, borderMidFull,
+  row, rowSplit,
+} from './ansi'
 
-// --- Header ---
+// --- Stats computation ---
 
-export function renderHeader(now: Date): string[] {
-  const ts = now.toLocaleString('zh-CN', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-  })
-  return [bold('CC Monitor CLI') + dim('  ' + ts)]
-}
-
-// --- Stats + comparison ---
-
-interface StatValues {
+export interface StatValues {
   input: number
   output: number
   cacheRead: number
@@ -30,7 +21,7 @@ interface StatValues {
   activeMs: number
 }
 
-function computeStats(records: TokenRecord[], pricing: ModelPricingConfig[]): StatValues {
+export function computeStats(records: TokenRecord[], pricing: ModelPricingConfig[]): StatValues {
   let input = 0, output = 0, cacheRead = 0, cost = 0
   for (const r of records) {
     input += r.inputTokens
@@ -43,7 +34,6 @@ function computeStats(records: TokenRecord[], pricing: ModelPricingConfig[]): St
       (r.cacheReadTokens / 1_000_000) * p.cacheRead
   }
 
-  // Active duration: sum segments where gap <= 15min
   const ACTIVE_GAP_MS = 15 * 60 * 1000
   const timestamps = records.map((r) => r.timestamp.getTime()).sort((a, b) => a - b)
   let activeMs = 0
@@ -55,105 +45,102 @@ function computeStats(records: TokenRecord[], pricing: ModelPricingConfig[]): St
   return { input, output, cacheRead, requests: records.length, cost, activeMs }
 }
 
-function fmtChange(curr: number, prev: number): string {
-  if (prev === 0) return ''
-  const pct = ((curr - prev) / prev) * 100
-  if (Math.abs(pct) < 0.5) return ''
-  const sign = pct > 0 ? '↑' : '↓'
-  const color = pct > 0 ? green : red
-  return color(`${sign}${Math.abs(pct).toFixed(1)}%`)
-}
+// --- Build stat rows for left column ---
 
-export function renderStats(records: TokenRecord[], pricing: ModelPricingConfig[]): string[] {
-  const all = computeStats(records, pricing)
-
-  // Split records into two halves by time for comparison
-  const sorted = [...records].sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime())
-  let prevStats: StatValues | null = null
-  if (sorted.length >= 4) {
-    const mid = Math.floor(sorted.length / 2)
-    prevStats = computeStats(sorted.slice(0, mid), pricing)
-  }
-  const currHalf = prevStats ? computeStats(sorted.slice(Math.floor(sorted.length / 2)), pricing) : null
-
-  const cols = [
-    { label: 'INPUT', value: cyan(bold(fmtK(all.input))), change: currHalf && prevStats ? fmtChange(currHalf.input, prevStats.input) : '' },
-    { label: 'OUTPUT', value: magenta(bold(fmtK(all.output))), change: currHalf && prevStats ? fmtChange(currHalf.output, prevStats.output) : '' },
-    { label: 'CACHE RD', value: cyan(bold(fmtK(all.cacheRead))), change: currHalf && prevStats ? fmtChange(currHalf.cacheRead, prevStats.cacheRead) : '' },
-    { label: 'REQUESTS', value: green(bold(String(all.requests))), change: currHalf && prevStats ? fmtChange(currHalf.requests, prevStats.requests) : '' },
-    { label: 'COST', value: yellow(bold(`$${all.cost.toFixed(2)}`)), change: currHalf && prevStats ? fmtChange(currHalf.cost, prevStats.cost) : '' },
-    { label: 'ACTIVE', value: bold(fmtDuration(all.activeMs)), change: '' },
+export function statLines(stats: StatValues): string[] {
+  return [
+    dim('IN  ') + padRight(cyan(bold(fmtK(stats.input))), 9) + dim('CACHE ') + cyan(bold(fmtK(stats.cacheRead))),
+    dim('OUT ') + padRight(magenta(bold(fmtK(stats.output))), 9) + dim('REQ   ') + green(bold(String(stats.requests))),
+    dim('ACT ') + bold(fmtDuration(stats.activeMs)),
   ]
-
-  const colWidth = 12
-  const labelLine = cols.map((c) => padRight(dim(c.label), colWidth)).join('')
-  const valueLine = cols.map((c) => padRight(c.value, colWidth)).join('')
-  const changeLine = cols.map((c) => padRight(c.change, colWidth)).join('')
-
-  const lines = [labelLine, valueLine]
-  if (cols.some((c) => c.change !== '')) {
-    lines.push(changeLine)
-  }
-  return lines
 }
 
-// --- Model breakdown ---
+// --- Build session rows for right column ---
 
-const MODEL_COLORS = [cyan, magenta, blue, green, yellow, red]
-
-export function renderModels(summaries: ModelSummary[]): string[] {
-  const lines: string[] = [dim('MODEL BREAKDOWN')]
-  const top = summaries.slice(0, 6)
-  for (let i = 0; i < top.length; i++) {
-    const m = top[i]
-    const colorFn = MODEL_COLORS[i % MODEL_COLORS.length]
-    const name = truncate(m.model, 26)
-    const pct = `${m.percentage.toFixed(0)}%`
-    const bar = colorFn(progressBar(m.percentage / 100, 20))
-    const req = `${m.requestCount} req`
-    lines.push(`${padRight(name, 28)} ${padLeft(pct, 4)}  ${bar}  ${padLeft(req, 7)}`)
-  }
-  return lines
-}
-
-// --- Recent sessions ---
-
-export function renderSessions(summaries: SessionSummary[], maxRows = 5): string[] {
-  const lines: string[] = [dim('RECENT SESSIONS')]
+export function sessionLines(summaries: SessionSummary[], maxWidth: number, maxRows: number): string[] {
   const top = summaries
     .filter((s) => !s.isSubagent)
     .sort((a, b) => b.lastTimestamp.getTime() - a.lastTimestamp.getTime())
     .slice(0, maxRows)
 
-  for (let i = 0; i < top.length; i++) {
-    const s = top[i]
-    const num = dim(`#${i + 1}`)
-    const title = truncate(`"${s.firstUserMessage}"`, 36)
-    const dur = fmtDuration(s.lastTimestamp.getTime() - s.firstTimestamp.getTime())
-    // Short model name: claude-opus-4-6 → Opus
-    const modelShort = (() => {
-      const m = s.models[0] || 'unknown'
-      if (m.includes('opus')) return 'Opus'
-      if (m.includes('sonnet')) return 'Sonnet'
-      if (m.includes('haiku')) return 'Haiku'
-      return truncate(m, 8)
-    })()
-    const tokens = fmtK(s.totalInput + s.totalOutput + s.totalCacheRead)
-    lines.push(
-      `${padRight(num, 4)} ${padRight(title, 38)} ${padLeft(dur, 6)}  ${padRight(modelShort, 7)} ${padLeft(tokens, 6)}`,
-    )
-  }
+  if (top.length === 0) return [dim('No sessions')]
 
-  if (top.length === 0) {
-    lines.push(dim('  No sessions found'))
-  }
-  return lines
+  const titleW = Math.max(maxWidth - 14, 8)
+  return top.map((s) => {
+    const title = truncate(s.firstUserMessage, titleW)
+    const dur = fmtDuration(s.lastTimestamp.getTime() - s.firstTimestamp.getTime())
+    const tokens = fmtK(s.totalInput + s.totalOutput + s.totalCacheRead)
+    return dim('▸ ') + padRight(title, titleW) + padLeft(dim(dur), 5) + padLeft(tokens, 6)
+  })
 }
 
-// --- Sparkline ---
+// --- Tab bar ---
 
-export function renderSparkline(buckets: HourBucket[]): string[] {
+export function tabBar(ranges: string[], activeIndex: number): string {
+  return ranges
+    .map((r, i) => (i === activeIndex ? cyan(bold(r)) : dim(r)))
+    .join(dim(' │ '))
+}
+
+// --- Full dashboard assembly ---
+
+export interface DashboardInput {
+  stats: StatValues
+  sessions: SessionSummary[]
+  buckets: HourBucket[]
+  ranges: string[]
+  activeRangeIndex: number
+  rangeLabel: string
+  now: Date
+}
+
+export function buildDashboard(input: DashboardInput, termWidth: number): string {
+  const W = Math.min(Math.max(termWidth, 40), 65)
+  const leftW = 22
+  const { stats, sessions, buckets, ranges, activeRangeIndex, rangeLabel, now } = input
+
+  const ts = now.toLocaleString('zh-CN', {
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+  })
+
+  // Header
+  const title = bold('CC Monitor') + dim('  ' + ts)
+  const cost = yellow(bold(`$${stats.cost.toFixed(2)}`))
+  const lines: string[] = [borderTop(W, title, cost)]
+
+  // Tab bar
+  lines.push(row(tabBar(ranges, activeRangeIndex), W))
+
+  // Mid separator with dual column labels
+  lines.push(borderMid(W, dim('Stats'), dim('Sessions'), true))
+
+  // Dual column: stats left, sessions right
+  const sLines = statLines(stats)
+  const rightInner = W - leftW - 3 // inner width of right column
+  const sessLines = sessionLines(sessions, rightInner, Math.max(sLines.length, 4))
+
+  const rowCount = Math.max(sLines.length, sessLines.length)
+  for (let i = 0; i < rowCount; i++) {
+    const left = sLines[i] || ''
+    const right = sessLines[i] || ''
+    lines.push(rowSplit(left, right, leftW, W))
+  }
+
+  // Merge separator
+  lines.push(borderMidFull(W, leftW))
+
+  // Sparkline row
   const values = buckets.map((b) => b.input + b.output + b.cacheRead)
-  const chart = sparkline(values, 30)
-  return [cyan(chart) + dim('  last 5h token volume')]
+  const chartW = Math.max(W - 8, 10)
+  const chart = sparkline(values, chartW)
+  lines.push(row(chart + dim(` ${rangeLabel}`), W))
+
+  // Bottom border with keybindings
+  lines.push(borderBottom(W, dim('tab range · r refresh · q quit')))
+
+  return lines.join('\n')
 }

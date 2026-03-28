@@ -81,52 +81,92 @@ export function truncate(s: string, maxLen: number): string {
 
 // --- Visual elements ---
 
-const BAR_FULL = '█'
-const BAR_EMPTY = '░'
-
-/** Render a progress bar like ████████░░░░ */
-export function progressBar(ratio: number, width: number): string {
-  const clamped = Math.max(0, Math.min(1, ratio))
-  const filled = Math.round(clamped * width)
-  return BAR_FULL.repeat(filled) + BAR_EMPTY.repeat(width - filled)
-}
-
 const SPARK_CHARS = '▁▂▃▄▅▆▇█'
 
-/** Render a sparkline from numeric values. */
+/** Render a sparkline with time-based gradient coloring. */
 export function sparkline(values: number[], width: number): string {
-  if (values.length === 0) return ' '.repeat(width)
-  // Resample to fit width
+  if (values.length === 0) return dim('▁'.repeat(width))
   const resampled: number[] = []
   for (let i = 0; i < width; i++) {
     const idx = Math.floor((i / width) * values.length)
     resampled.push(values[Math.min(idx, values.length - 1)])
   }
   const max = Math.max(...resampled, 1)
+  const gradientColors = [dim, dim, blue, blue, magenta, magenta, cyan, cyan, green, green]
   return resampled
-    .map((v) => {
-      const idx = Math.min(Math.floor((v / max) * (SPARK_CHARS.length - 1)), SPARK_CHARS.length - 1)
-      return SPARK_CHARS[idx]
+    .map((v, i) => {
+      const charIdx = Math.min(
+        Math.floor((v / max) * (SPARK_CHARS.length - 1)),
+        SPARK_CHARS.length - 1,
+      )
+      const colorIdx = Math.floor((i / resampled.length) * gradientColors.length)
+      const colorFn = gradientColors[Math.min(colorIdx, gradientColors.length - 1)]
+      return v === 0 ? dim(SPARK_CHARS[0]) : colorFn(SPARK_CHARS[charIdx])
     })
     .join('')
 }
 
-// --- Box drawing ---
+// --- Box drawing helpers ---
 
-/** Wrap lines in a Unicode box-drawing frame of given inner width. */
-export function box(sections: string[][], innerWidth: number): string[] {
-  const top = '┌' + '─'.repeat(innerWidth) + '┐'
-  const sep = '├' + '─'.repeat(innerWidth) + '┤'
-  const bot = '└' + '─'.repeat(innerWidth) + '┘'
+/** Top border with embedded title: ┌ Title ──────── value ┐ */
+export function borderTop(width: number, left: string, right: string): string {
+  const leftLen = visibleLen(left)
+  const rightLen = visibleLen(right)
+  const fill = width - 2 - leftLen - rightLen - 2 // 2 for ┌┐, 2 for spaces around fill
+  return dim('┌') + ' ' + left + ' ' + dim('─'.repeat(Math.max(fill, 1))) + ' ' + right + dim(' ┐')
+}
 
-  const result: string[] = [top]
-  for (let si = 0; si < sections.length; si++) {
-    if (si > 0) result.push(sep)
-    for (const line of sections[si]) {
-      const padded = padRight(line, innerWidth - 4)
-      result.push(`│  ${padded}  │`)
-    }
+/** Bottom border with embedded text: └─ text ──────────────┘ */
+export function borderBottom(width: number, text: string): string {
+  const textLen = visibleLen(text)
+  const fill = width - 2 - textLen - 3 // 2 for └┘, 3 for ─ + spaces
+  return dim('└─') + ' ' + text + ' ' + dim('─'.repeat(Math.max(fill, 1)) + '┘')
+}
+
+/** Mid separator with label: ├ Label ───────┬─────────────┤ */
+export function borderMid(width: number, left: string, right: string, hasSplit: boolean): string {
+  const leftLen = visibleLen(left)
+  const rightLen = visibleLen(right)
+  if (hasSplit) {
+    const leftW = leftLen + 2
+    const rightW = rightLen + 2
+    const totalFill = width - 2 - leftW - rightW - 1 // -1 for ┬
+    const leftFill = Math.floor(totalFill / 2)
+    const rightFill = totalFill - leftFill
+    return (
+      dim('├') + ' ' + left + ' ' + dim('─'.repeat(Math.max(leftFill, 0))) +
+      dim('┬') + ' ' + right + ' ' + dim('─'.repeat(Math.max(rightFill, 0)) + '┤')
+    )
   }
-  result.push(bot)
-  return result
+  const fill = width - 2 - leftLen - rightLen - 3
+  return dim('├') + ' ' + left + ' ' + dim('─'.repeat(Math.max(fill, 1))) + ' ' + right + dim(' ┤')
+}
+
+/** Full-width mid separator: ├──────────────┴──────────────┤ */
+export function borderMidFull(width: number, splitPos?: number): string {
+  if (splitPos !== undefined) {
+    return dim('├' + '─'.repeat(splitPos) + '┴' + '─'.repeat(width - 2 - splitPos - 1) + '┤')
+  }
+  return dim('├' + '─'.repeat(width - 2) + '┤')
+}
+
+/** Row with left border: │ content                     │ */
+export function row(content: string, width: number): string {
+  return dim('│') + ' ' + padRight(content, width - 4) + ' ' + dim('│')
+}
+
+/** Row with mid split: │ left      │ right             │ */
+export function rowSplit(
+  left: string,
+  right: string,
+  leftWidth: number,
+  totalWidth: number,
+): string {
+  // leftWidth includes left │ + space, rightWidth includes right space + │
+  // │ <left pad to lw-2> │ <right pad to rw-2> │
+  const rightInner = totalWidth - leftWidth - 3 // subtract │ + space + │
+  return (
+    dim('│') + ' ' + padRight(left, leftWidth - 2) +
+    dim('│') + ' ' + padRight(right, rightInner) + dim('│')
+  )
 }

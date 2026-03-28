@@ -1,9 +1,9 @@
 // CLI dashboard entry point — terminal token monitor for Claude Code
 import { homedir } from 'os'
-import { join, sep } from 'path'
-import { existsSync, readdirSync } from 'fs'
+import { join } from 'path'
+import { existsSync } from 'fs'
 import { FileCache } from '../electron/services/cache'
-import { aggregateByModel, aggregateBySession, aggregateByHour } from '../electron/services/aggregator'
+import { aggregateBySession, aggregateByHour } from '../electron/services/aggregator'
 import { renderDashboard } from './render'
 import type { ModelPricingConfig } from '../src/types/ipc'
 
@@ -13,6 +13,16 @@ const DEFAULT_PRICING: ModelPricingConfig[] = [
   { match: 'sonnet', input: 3, output: 15, cacheRead: 0.3 },
   { match: 'haiku', input: 1, output: 5, cacheRead: 0.1 },
 ]
+
+// --- Time ranges ---
+const TIME_RANGES = [
+  { label: '10m', ms: 10 * 60 * 1000 },
+  { label: '30m', ms: 30 * 60 * 1000 },
+  { label: '1h', ms: 60 * 60 * 1000 },
+  { label: '3h', ms: 3 * 60 * 60 * 1000 },
+  { label: '5h', ms: 5 * 60 * 60 * 1000 },
+]
+let rangeIndex = 4 // default: 5h
 
 // --- Args parsing ---
 const args = process.argv.slice(2)
@@ -39,6 +49,11 @@ Options:
   --project <path>      Filter to specific project directory
   --all                 Show all projects (default: current cwd only)
   -h, --help            Show this help
+
+Keys:
+  Tab     Cycle time range (10m/30m/1h/3h/5h)
+  r       Force refresh
+  q       Quit
 `)
     process.exit(0)
   }
@@ -49,31 +64,9 @@ function cwdToProjectDir(): string {
   const cwd = projectFilter || process.cwd()
   const claudeProjectsDir = join(homedir(), '.claude', 'projects')
 
-  // Claude Code encodes paths by replacing path separators with hyphens
-  // e.g. /home/user/cc-monitor → -home-user-cc-monitor (Linux/macOS)
-  // e.g. C:\Users\user\project → C-Users-user-project (Windows)
-  const encoded = cwd.split(sep).join('-').replace(/^-/, '-')
-  const projectDir = join(claudeProjectsDir, encoded.startsWith('-') ? encoded : `-${encoded}`)
-
-  if (existsSync(projectDir)) return projectDir
-
-  // Fallback: try to find a matching directory
-  try {
-    const dirs = readdirSync(claudeProjectsDir, { withFileTypes: true })
-    // Look for directory that matches cwd encoding
-    for (const d of dirs) {
-      if (!d.isDirectory()) continue
-      // Decode: -home-user-cc-monitor → /home/user/cc-monitor
-      const decoded = d.name.replace(/-/g, '/')
-      if (decoded === cwd || decoded === cwd.replace(/\\/g, '/')) {
-        return join(claudeProjectsDir, d.name)
-      }
-    }
-  } catch {
-    // ignore
-  }
-
-  return projectDir
+  // Claude Code encodes paths: /home/user/project → -home-user-project
+  const encoded = cwd.replace(/\//g, '-')
+  return join(claudeProjectsDir, encoded)
 }
 
 // --- Main loop ---
@@ -96,24 +89,25 @@ function loadAndRender(): void {
   }
 
   cache.loadProjectFiles(projectDir)
-  const records = cache.getAllRecords()
+  const allRecords = cache.getAllRecords()
   const userMessages = cache.getUserMessages()
 
-  const now = Date.now()
-  const fiveHoursAgo = now - 5 * 60 * 60 * 1000
-  const recentRecords = records.filter((r) => r.timestamp.getTime() >= fiveHoursAgo)
+  const range = TIME_RANGES[rangeIndex]
+  const cutoff = Date.now() - range.ms
+  const records = allRecords.filter((r) => r.timestamp.getTime() >= cutoff)
 
-  const modelSummaries = aggregateByModel(records)
   const sessionSummaries = aggregateBySession(records, userMessages)
-  const hourBuckets = aggregateByHour(recentRecords)
+  const hourBuckets = aggregateByHour(records)
 
   const output = renderDashboard(
     {
       records,
-      modelSummaries,
       sessionSummaries,
       hourBuckets,
       pricing: DEFAULT_PRICING,
+      rangeLabel: range.label,
+      ranges: TIME_RANGES.map((r) => r.label),
+      activeRangeIndex: rangeIndex,
     },
     getTermWidth(),
   )
@@ -142,10 +136,12 @@ if (process.stdin.isTTY) {
   process.stdin.setEncoding('utf8')
   process.stdin.on('data', (key: string) => {
     if (key === 'q' || key === '\x03') {
-      // q or Ctrl+C
       cleanup()
     } else if (key === 'r') {
       cache.clear()
+      loadAndRender()
+    } else if (key === '\t') {
+      rangeIndex = (rangeIndex + 1) % TIME_RANGES.length
       loadAndRender()
     }
   })
