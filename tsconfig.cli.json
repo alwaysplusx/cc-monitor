@@ -1,0 +1,27 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "outDir": "out/cli",
+    "rootDir": ".",
+    "resolveJsonModule": true,
+    "declaration": false,
+    "sourceMap": false,
+    "types": ["node"]
+  },
+  "include": [
+    "cli/**/*.ts",
+    "electron/services/parser.ts",
+    "electron/services/aggregator.ts",
+    "electron/services/cache.ts",
+    "electron/services/project-scanner.ts",
+    "src/types/data.ts",
+    "src/types/ipc.ts",
+    "src/lib/format.ts",
+    "src/lib/constants.ts"
+  ]
+}

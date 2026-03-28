@@ -12,7 +12,9 @@
     "format": "prettier --write .",
     "typecheck:node": "tsc --noEmit -p tsconfig.node.json",
     "typecheck:web": "tsc --noEmit -p tsconfig.web.json",
-    "typecheck": "npm run typecheck:node && npm run typecheck:web"
+    "typecheck": "npm run typecheck:node && npm run typecheck:web",
+    "cli": "tsx cli/index.ts",
+    "cli:all": "tsx cli/index.ts --all"
   },
   "dependencies": {
     "@electron-toolkit/preload": "^3.0.1",
@@ -44,6 +46,7 @@
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "tailwindcss": "^4.2.1",
+    "tsx": "^4.21.0",
     "typescript": "^5.8.3",
     "vite": "^6.3.5"
   },
