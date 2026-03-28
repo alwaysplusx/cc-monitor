@@ -1,0 +1,32 @@
+{
+  "name": "cc-dash",
+  "version": "0.1.0",
+  "description": "Terminal dashboard for Claude Code token usage",
+  "bin": {
+    "cc-dash": "dist/cc-dash.js"
+  },
+  "files": [
+    "dist/cc-dash.js"
+  ],
+  "scripts": {
+    "build": "cd .. && node node_modules/.bin/esbuild cli/index.ts --bundle --platform=node --target=node18 --format=cjs --banner:js=\"#!/usr/bin/env node\" --outfile=cli/dist/cc-dash.js",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "claude",
+    "claude-code",
+    "token",
+    "monitor",
+    "cli",
+    "dashboard"
+  ],
+  "license": "MIT",
+  "engines": {
+    "node": ">=18"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/alwaysplusx/cc-monitor.git",
+    "directory": "cli"
+  }
+}

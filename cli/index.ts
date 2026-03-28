@@ -1,7 +1,7 @@
 // CLI dashboard entry point — terminal token monitor for Claude Code
 import { homedir } from 'os'
 import { join, sep } from 'path'
-import { existsSync } from 'fs'
+import { existsSync, readdirSync } from 'fs'
 import { FileCache } from '../electron/services/cache'
 import { aggregateByModel, aggregateBySession, aggregateByHour } from '../electron/services/aggregator'
 import { renderDashboard } from './render'
@@ -58,7 +58,6 @@ function cwdToProjectDir(): string {
   if (existsSync(projectDir)) return projectDir
 
   // Fallback: try to find a matching directory
-  const { readdirSync } = require('fs') as typeof import('fs')
   try {
     const dirs = readdirSync(claudeProjectsDir, { withFileTypes: true })
     // Look for directory that matches cwd encoding

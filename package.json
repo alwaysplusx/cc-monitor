@@ -14,7 +14,8 @@
     "typecheck:web": "tsc --noEmit -p tsconfig.web.json",
     "typecheck": "npm run typecheck:node && npm run typecheck:web",
     "cli": "tsx cli/index.ts",
-    "cli:all": "tsx cli/index.ts --all"
+    "cli:all": "tsx cli/index.ts --all",
+    "cli:build": "esbuild cli/index.ts --bundle --platform=node --target=node18 --format=cjs --banner:js='#!/usr/bin/env node' --outfile=cli/dist/cc-dash.js && chmod +x cli/dist/cc-dash.js"
   },
   "dependencies": {
     "@electron-toolkit/preload": "^3.0.1",
@@ -40,6 +41,7 @@
     "electron": "^35.2.1",
     "electron-builder": "^26.8.1",
     "electron-vite": "^3.1.0",
+    "esbuild": "^0.27.4",
     "eslint": "^8.57.1",
     "eslint-plugin-react": "^7.37.5",
     "prettier": "^3.8.1",
