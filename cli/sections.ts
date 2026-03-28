@@ -47,10 +47,13 @@ export function computeStats(records: TokenRecord[], pricing: ModelPricingConfig
 
 // --- Build stat rows for left column ---
 
-export function statLines(stats: StatValues): string[] {
+export function statLines(stats: StatValues, maxWidth: number): string[] {
+  // Two columns: label(3) + space(1) + value + gap + label(3) + space(1) + value
+  const half = Math.floor(maxWidth / 2)
+  const valW1 = half - 4 // first value width after "IN " etc
   return [
-    dim('IN  ') + padRight(cyan(bold(fmtK(stats.input))), 9) + dim('CACHE ') + cyan(bold(fmtK(stats.cacheRead))),
-    dim('OUT ') + padRight(magenta(bold(fmtK(stats.output))), 9) + dim('REQ   ') + green(bold(String(stats.requests))),
+    dim('IN  ') + padRight(cyan(bold(fmtK(stats.input))), valW1) + dim('CA  ') + cyan(bold(fmtK(stats.cacheRead))),
+    dim('OUT ') + padRight(magenta(bold(fmtK(stats.output))), valW1) + dim('REQ ') + green(bold(String(stats.requests))),
     dim('ACT ') + bold(fmtDuration(stats.activeMs)),
   ]
 }
@@ -116,11 +119,12 @@ export function buildDashboard(input: DashboardInput, termWidth: number): string
   lines.push(row(tabBar(ranges, activeRangeIndex), W))
 
   // Mid separator with dual column labels
-  lines.push(borderMid(W, dim('Stats'), dim('Sessions'), true))
+  lines.push(borderMid(W, dim('Stats'), dim('Sessions'), leftW))
 
   // Dual column: stats left, sessions right
-  const sLines = statLines(stats)
-  const rightInner = W - leftW - 3 // inner width of right column
+  const leftInner = leftW - 3
+  const sLines = statLines(stats, leftInner)
+  const rightInner = W - leftW - 4 // matches rowSplit right content width
   const sessLines = sessionLines(sessions, rightInner, Math.max(sLines.length, 4))
 
   const rowCount = Math.max(sLines.length, sessLines.length)

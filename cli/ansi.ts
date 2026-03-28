@@ -107,51 +107,57 @@ export function sparkline(values: number[], width: number): string {
 }
 
 // --- Box drawing helpers ---
+// All helpers produce lines of exactly `width` visible columns.
 
 /** Top border with embedded title: ┌ Title ──────── value ┐ */
 export function borderTop(width: number, left: string, right: string): string {
   const leftLen = visibleLen(left)
   const rightLen = visibleLen(right)
-  const fill = width - 2 - leftLen - rightLen - 2 // 2 for ┌┐, 2 for spaces around fill
+  // ┌ + space + left + space + ───fill─── + space + right + space + ┐
+  const fill = width - leftLen - rightLen - 6
   return dim('┌') + ' ' + left + ' ' + dim('─'.repeat(Math.max(fill, 1))) + ' ' + right + dim(' ┐')
 }
 
 /** Bottom border with embedded text: └─ text ──────────────┘ */
 export function borderBottom(width: number, text: string): string {
   const textLen = visibleLen(text)
-  const fill = width - 2 - textLen - 3 // 2 for └┘, 3 for ─ + spaces
+  // └─ + space + text + space + ───fill─── + ┘
+  const fill = width - textLen - 5
   return dim('└─') + ' ' + text + ' ' + dim('─'.repeat(Math.max(fill, 1)) + '┘')
 }
 
-/** Mid separator with label: ├ Label ───────┬─────────────┤ */
-export function borderMid(width: number, left: string, right: string, hasSplit: boolean): string {
+/** Mid separator with dual labels: ├ Left ─────┬ Right ────┤ */
+export function borderMid(
+  width: number, left: string, right: string, splitPos?: number,
+): string {
   const leftLen = visibleLen(left)
   const rightLen = visibleLen(right)
-  if (hasSplit) {
-    const leftW = leftLen + 2
-    const rightW = rightLen + 2
-    const totalFill = width - 2 - leftW - rightW - 1 // -1 for ┬
-    const leftFill = Math.floor(totalFill / 2)
-    const rightFill = totalFill - leftFill
+  if (splitPos !== undefined) {
+    // ┬ at column splitPos to align with │ in rowSplit
+    // ├(1) + space(1) + left + space(1) + fill + ┬(1) + space(1) + right + space(1) + fill + ┤(1)
+    const leftFill = splitPos - leftLen - 3
+    const rightFill = width - splitPos - rightLen - 4
     return (
       dim('├') + ' ' + left + ' ' + dim('─'.repeat(Math.max(leftFill, 0))) +
       dim('┬') + ' ' + right + ' ' + dim('─'.repeat(Math.max(rightFill, 0)) + '┤')
     )
   }
-  const fill = width - 2 - leftLen - rightLen - 3
+  const fill = width - leftLen - rightLen - 5
   return dim('├') + ' ' + left + ' ' + dim('─'.repeat(Math.max(fill, 1))) + ' ' + right + dim(' ┤')
 }
 
 /** Full-width mid separator: ├──────────────┴──────────────┤ */
 export function borderMidFull(width: number, splitPos?: number): string {
   if (splitPos !== undefined) {
-    return dim('├' + '─'.repeat(splitPos) + '┴' + '─'.repeat(width - 2 - splitPos - 1) + '┤')
+    // ┴ at column splitPos (same as ┬ and │)
+    return dim('├' + '─'.repeat(splitPos - 1) + '┴' + '─'.repeat(width - splitPos - 2) + '┤')
   }
   return dim('├' + '─'.repeat(width - 2) + '┤')
 }
 
 /** Row with left border: │ content                     │ */
 export function row(content: string, width: number): string {
+  // │ + space + content padded + space + │ = width
   return dim('│') + ' ' + padRight(content, width - 4) + ' ' + dim('│')
 }
 
@@ -159,14 +165,18 @@ export function row(content: string, width: number): string {
 export function rowSplit(
   left: string,
   right: string,
-  leftWidth: number,
+  splitPos: number,
   totalWidth: number,
 ): string {
-  // leftWidth includes left │ + space, rightWidth includes right space + │
-  // │ <left pad to lw-2> │ <right pad to rw-2> │
-  const rightInner = totalWidth - leftWidth - 3 // subtract │ + space + │
+  // Total: │ + sp + left(pad) + sp + │ + sp + right(pad) + sp + │ = totalWidth
+  // │ at col 0, │ at col splitPos, │ at col totalWidth-1
+  const leftInner = splitPos - 3 // subtract │(1) + space(1) before, space(1) after
+  const rightInner = totalWidth - splitPos - 3 // subtract │(1) + space(1) before, space(1) + │(1) after... wait
+  // splitPos cols for left side: │(1) + sp(1) + content(splitPos-3) + sp(1) = splitPos
+  // right side: │(1) + sp(1) + content(?) + sp(1) + │(1) => content = totalWidth - splitPos - 4
+  const rightContentW = totalWidth - splitPos - 4
   return (
-    dim('│') + ' ' + padRight(left, leftWidth - 2) +
-    dim('│') + ' ' + padRight(right, rightInner) + dim('│')
+    dim('│') + ' ' + padRight(left, leftInner) + ' ' +
+    dim('│') + ' ' + padRight(right, rightContentW) + ' ' + dim('│')
   )
 }
